@@ -1,0 +1,14 @@
+/* You can add custom styles here. */
+
+// @import "plugins/numbered";
+
+.markdown {
+    .question {
+        border-color: #4a4;
+        background-color: rgba(#4a4, 0.1);
+    }
+    .task {
+        border-color: #f60;
+        background-color: rgba(#f60, 0.1);
+    }
+}
