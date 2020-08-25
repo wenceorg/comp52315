@@ -57,11 +57,13 @@ capacity smaller we can make the memory faster, and vice versa.
 
 We have something close to the following picture
 
-FIXME add figure
+{{< manfig src="cachesketch.png"
+    width="70%"
+    caption="As memory gets larger, it must become slower, both in latency and bandwidth" >}}
 
 To explore these latencies in more depth (and see how they've changed
 over time), see [latency numbers every programmer should
-know](https://colin-scott.github.io/personal_website/research/interactive_latency.html)
+know](https://colin-scott.github.io/personal_website/research/interactive_latency.html).
 
 ## Caches
 
@@ -211,11 +213,97 @@ a_i ← b_i * alpha + c_i
 Which is implemented as a single instruction `FMA`. Broadwell chips
 can execute up to two `FMA` instructions per cycle.
 
-We will revisit this in a later exercise.
+We will revisit this in a [later exercise]({{< ref "exercise05.md" >}}).
 
 ## Scalable and saturating resources
 
 Although most of the focus in this course is on single core
 performance, it is worthwhile taking a little time to consider how
 resource use changes when we involve more cores. All modern chips have
-more than one core on them.
+more than one core on them. Some of the resources on a chip are
+therefore private to each core, and some are shared. In particular,
+the floating point units are private: adding more cores increasing the
+total floating point throughput. In contrast, the main memory is
+shared between cores, so adding more cores _does not_ increase the
+memory bandwidth.
+
+We can ask likwid, using
+[`likwid-topology`](https://github.com/RRZE-HPC/likwid/wiki/likwid-topology)
+to provide us some information on the layout of the system we are
+running on. It produces a schematic of the core and memory layout in
+ASCII, similar to the diagram below
+
+{{< manfig src="cacheschematic.png"
+    width="70%"
+    caption="Example layout of caches and memory for a 4 core system."
+    >}}
+    
+Although in this course we will spend most of our time focussing on
+_single core_ performance, in practice, most scientific computing
+algorithms will be parallel.
+
+To understand how parallelisation will affect the performance on real
+hardware, we need to know if will be limited by a resource which is
+scalable, or saturating.
+
+{{% columns %}}
+### Scalable resources
+
+These resources are private to each core/chip. For example, CPU cores
+themselves are a _scalable_ resource. Adding a second core doubles the
+number of floating point operations we can perform.
+
+As a consequence, if our code is limited by the floating point
+throughput, adding more cores is a useful thing to do.
+
+{{< autofig src="scalable-resource.png"
+    width="100%"
+    caption="Prototypical performance of a scalable resource" >}}
+
+<--->
+
+### Saturating/shared resources
+
+These resources are shared between cores. The typical example is main
+memory bandwidth. In the diagram above, we see that the main memory
+interface is shared between the four cores. This is typical for modern
+CPUs.
+
+On a single chip, if our code is limited by the main memory bandwidth,
+adding more cores is _not_ useful. Instead we would need to add
+another chip (with another memory system).
+
+{{< autofig src="saturating-resource.png"
+    width="100%"
+    caption="Prototypical performance of a saturating resource" >}}
+
+{{% /columns %}}
+
+You should explore this on Hamilton in [exercise 3]({{< ref
+"exercise03" >}})
+
+## Summary: challenges for writing high performance code
+
+At a high level, the performance of an algorithm is dependent on:
+
+1. how many instructions are required to implement the algorithm;
+1. how efficiently those instructions can be executed on a processor;
+1. and what the runtime contribution of the required data transfers
+   is.
+   
+Given an optimal _algorithm_, converting that to an optimal
+_implementation_ requires addressing all of these points in tandem.
+This is made complicated by the complexity and parallelism of modern
+hardware. A typical Intel server offers
+
+1. Socket-based parallelism: 1-4 CPUs on a typical motherboard;
+1. Core-based parallelism: 4-32 cores in a typical CPU;
+1. SIMD/Vectorisation: vector registers capable of holding 2-16 single;
+   precision elements on each core;
+1. Superscalar execution: typically 2-8 instructions per cycle per core.
+
+To limit the scope to something reasonable, we will focus mainly on
+the SIMD and superscalar parts of this picture. The rationale for this
+is that we should aim for good single core performance _before_
+looking at parallelism. If we don't, we might be led in the wrong
+direction by a "false" idea of the performance limits.

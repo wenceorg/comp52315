@@ -4,3 +4,5 @@
 /site/node_modules
 /site/static/images/auto
 /site/static/code
+/figures/*.png
+/figures/*.pdf
