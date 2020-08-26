@@ -13,10 +13,13 @@ html: allcode pypng
 
 allslides: allfigures
 
-pypng: $(pypng)
+site/static/images:
+	mkdir -p $@
+
+pypng: site/static/images $(pypng)
 	rsync --delete -rupm figures/ site/static/images/auto/ --filter '+ */' --filter '+ *.png' --filter '- *'
 
-drawiopng: $(drawiopng)
+drawiopng: site/static/images $(drawiopng)
 	rsync --delete -rupm figures/ site/static/images/manual/ --filter '+ */' --filter '+ *.png' --filter '- *'
 
 allpdf: $(drawiopdf) $(pypdf)
