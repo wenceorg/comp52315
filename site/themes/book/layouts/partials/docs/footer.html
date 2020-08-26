@@ -20,11 +20,10 @@
 {{ end }}
 </div>
 
+{{ if .Site.Params.CopyRight }}
 <div class="flex flex-wrap align-right">
   <p>
-  Copyright 2020&ndash;
-  <a href="mailto:lawrence@wence.uk">Lawrence Mitchell</a>
-  &amp; <a href="https://www.dur.ac.uk/">Durham University</a>.
+    {{ .Site.Params.CopyRight | markdownify }}
   </p>
   <p>
   <a rel="license"
@@ -37,3 +36,4 @@
     Commons Attribution-ShareAlike 4.0 International License</a>.
   </p>
 </div>
+{{ end }}

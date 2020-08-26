@@ -1,11 +1,11 @@
 baseURL = 'https://teaching.wence.uk/comp52315/'
-languageCode = 'en-GB'
+DefaultContentLanguage = 'en'
 title = 'COMP52315 – Performance Engineering'
 
 staticDir = ['static']
 disablePathToLower = false
 enableGitInfo = true
-enableRobotsTXT = true
+enableRobotsTXT = false
 
 theme = 'book'
 
@@ -34,3 +34,4 @@ BookRepo = 'https://github.com/wenceorg/comp52315'
 ModulePage = 'https://www.dur.ac.uk/postgraduate.modules/module_description/?year=2020&module_code=COMP52315'
 BookEditPath = 'edit/main/site/content'
 ImageDir = 'images'
+CopyRight = '&copy; 2020-- [Lawrence Mitchell](mailto:lawrence@wence.uk) and [Durham University](https://www.dur.ac.uk/).'
