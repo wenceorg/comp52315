@@ -41,4 +41,54 @@ simple model for loopy heavy code.
 
 ## Roofline model
 
+The roofline model has a simple view of both hardware and software
 
+{{% columns %}}
+
+### Simple view of hardware
+
+{{< manfig src="rooflinecpumodel.png"
+    width="100%" >}}
+
+<--->
+
+### Simple view of software
+
+```c
+/* Possibly nested loops */
+for (i = 0; i < ...; i++)
+ /* Complicated code doing */
+ /* N FLOPs causing
+ /* B bytes of data transfer */
+```
+
+This allows us to characterise the code using a single number, its
+_operational intensity_, measured in FLOPs/byte
+
+$$
+I_c = \frac{N}{B}
+$$
+
+{{% /columns %}}
+
+To this characterisation of the software, we add two numbers that
+characterise the hardware
+
+1. The _peak floating point performance_ \\(P_\text{peak}\\) measured
+   in FLOPs/s
+1. The _peak streaming memory bandwidth_ \\(B_\text{peak}\\) measured
+   in bytes/s
+   
+Our challenge is then to ask what the limit on the performance of a
+piece of code is. We characterise performance by how fast work can be
+done, measured in FLOPs/s. The roofline model says that the bottleneck
+is either due to
+
+1. execution of work, limited by \\(P_\text{peak}\\),
+1. or the data path \\(I_c B_\text{peak}\\).
+
+We therefore arrive at a bound on performance
+
+$$
+P_\text{max} = \text{min}(P_\text{peak}, I_c B_\text{peak})
+$$
