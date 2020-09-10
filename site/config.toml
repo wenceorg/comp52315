@@ -32,5 +32,5 @@ BookComments = false
 BookToc = true
 BookRepo = 'https://github.com/wenceorg/comp52315'
 ModulePage = 'https://www.dur.ac.uk/postgraduate.modules/module_description/?year=2020&module_code=COMP52315'
-BookEditPath = 'edit/master/content'
+BookEditPath = 'edit/main/site/content'
 ImageDir = 'images'
