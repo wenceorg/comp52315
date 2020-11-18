@@ -9,7 +9,7 @@ katex: true
 {{< hint warning >}}
 
 You should submit your work for this coursework via DUO. The
-submission deadline is XXX.
+submission deadline is 2021-02-15 at 14:00UTC.
 
 {{< /hint >}}
 
