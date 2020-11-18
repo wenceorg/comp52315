@@ -4,7 +4,7 @@ weight: 5
 katex: true
 ---
 
-# Studying a libCEED bake-off problem
+# Fast finite elements
 
 {{< hint warning >}}
 
