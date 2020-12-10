@@ -49,19 +49,17 @@ compile it following their instructions and set the `PETSC_DIR` and
 
 On Hamilton, I provide a useable version of PETSc.
 
-Set
-
-```
-PETSC_DIR=/ddn/data/vtdb72/petsc
-PETSC_ARCH=arch-linux2-c-opt
-```
-
 To use it, you'll need to use the following modules
-
 ```
 gcc/9.3.0
 intelmpi/gcc/2019.6
 ```
+and set the environment variables
+```
+export PETSC_DIR=/ddn/data/vtdb72/petsc
+export PETSC_ARCH=arch-linux2-c-opt
+```
+
 {{< /hint >}}
 
 With PETSc available, you can build the CEED library following their [build
@@ -251,5 +249,11 @@ including figures and tables).
 |---------:|:--------------------------------------------|-------|
 |   Report | Appropriate use of performance measurements | 20    |
 |   Report | Appropriate use of performance models       | 20    |
-|   Report | Analysis and presentation of data           | 35    |
-|   Report | Quality of writing                          | 25    |
+|   Report | Analysis and presentation of data, writing  | 60    |
+
+The report will be marked with reference to the descriptors for
+written work (non-dissertation) found on
+[DUO](https://duo.dur.ac.uk/webapps/blackboard/content/listContent.jsp?course_id=_91410_1&content_id=_5831035_1),
+see _MSc in Scientific Computing and Data Analysis Programme →
+Assessments and Procedures → Marking criteria for written work
+(non-dissertation)_.
