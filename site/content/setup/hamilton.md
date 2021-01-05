@@ -17,7 +17,7 @@ configuration.md >}}) on how to configure `ssh` for swifter login.
 
 ## Quickstart reminder
 
-If you want to reminder yourself of how Hamilton works, take a look at
+If you want to remind yourself of how Hamilton works, take a look at
 the [quickstart
 guide](https://teaching.wence.uk/phys52015/setup/hamilton-quickstart/#supercomputing-durham-hamilton-quick-start-guide)
-from Core Ib.
+from [PHYS52105](https://teaching.wence.uk/phys52015/).
