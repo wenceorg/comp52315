@@ -1,6 +1,7 @@
 ---
 title: "The memory hierarchy"
 weight: 2
+katex: true
 ---
 
 # An overview of memory hierarchies

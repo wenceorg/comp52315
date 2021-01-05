@@ -1,6 +1,7 @@
 ---
 title: "Introduction"
 weight: 1
+katex: true
 ---
 
 # Resources in stored program computers
@@ -18,7 +19,7 @@ instructions in the program code along with further parts of logical
 control and load/store of data.
 
 {{< manfig src="CPU.png"
-   width="70%"
+   width="50%"
    caption="High level view of processor architecture and resource use" >}}
 
 From a (simplified) hardware designer's point of view, the primary
