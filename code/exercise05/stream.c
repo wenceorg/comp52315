@@ -152,6 +152,7 @@ int main(int argc, char **argv)
     fprintf(stderr, "  fma - avx + fma instructrions\n");
     fprintf(stderr, "  align - avx + 32byte aligned memory access\n");
     fprintf(stderr, "  unalign - avx + unaligned memory access\n");
+    LIKWID_MARKER_CLOSE;
     return 1;
   }
 
@@ -185,6 +186,7 @@ int main(int argc, char **argv)
     free(a);
     free(b);
     free(c);
+    LIKWID_MARKER_CLOSE;
     return 1;
   }
   for (int i = 0; i < n; i++) {

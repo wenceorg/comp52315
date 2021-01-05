@@ -23,10 +23,22 @@ Data">SIMD</abbr> (vectorised) code has four distinct performance
 plateaus as a function of the array size, whereas the scalar code has
 only two. 
 
-On this hardware (Broadwell), the chip can issue up to one `ADD`
-(scalar or vector) per cycle. The peak clock speed is 2.9GHz. So the
-peak scalar throughput of addition is 2.9GFlops/s, while the peak
-vector throughput is \\(2.9 \times 8 = 23.2\\)GFlops/s.
+On this hardware (Broadwell), the chip can issue up to one floating
+point `ADD` (scalar or vector) per cycle. The peak clock speed is
+2.9GHz. So the peak scalar throughput of addition is 2.9GFlops/s,
+while the peak vector throughput is \\(2.9 \times 8 = 23.2\\)GFlops/s.
+
+{{< hint info >}}
+
+How do I know the instruction issue rate? It is advertised in some of
+the Intel optimisation manuals. It's also in [Agner
+Fog's](https://www.agner.org) reference on [instruction
+latency](https://www.agner.org/optimize/instruction_tables.pdf), see
+the table for Intel Broadwell, starting on page 232. Alternatively, I
+can go to [μops.info](https://uops.info) and look at their interactive
+[table](https://uops.info/table.html).
+
+{{< /hint >}}
 
 We can see that the vector code achieves peak throughput for small
 vectors, but not large ones. Why is this?
@@ -58,7 +70,7 @@ capacity smaller we can make the memory faster, and vice versa.
 
 We have something close to the following picture
 
-{{< manfig src="cachesketch.png"
+{{< manfig src="cachesketch.svg"
     width="70%"
     caption="As memory gets larger, it must become slower, both in latency and bandwidth" >}}
 
@@ -78,7 +90,90 @@ Except in certain special cases, it's not possible to know _which_
 data will be used frequently. As a consequence, caches rely on a
 _principle of locality_.
 
-FIXME: add details on caches
+As an analogy, consider implementing an algorithm from a textbook. You have
+the textbook on the shelf, but the first time you go to find something
+you need to get the book, search its index, flip to the correct page
+and start reading. Now, you think you understand, so you put the
+textbook away again on the shelf. Then you carry on with your
+implementation and realise you need to refer to the next page in the
+book, so you go back to the shelf, grab the book, flip to the correct
+page and reacquaint yourself with notation and continue working. This
+is slow. A more efficient thing to do would be to leave the textbook
+on your desk until you're definitely finished with it (or your desk
+becomes full and you need space for another one). In analogy with
+memory accesses, this is exactly what caches enable: fast lookup to
+frequently used information.
+
+### Principle of locality
+
+It is normally not possible to decide before execution exactly which
+data will be needed frequently (and is therefore suitable for
+caching). In practice, most programs either do (or could) exhibit
+_locality_ of data access. If we want our code to run fast, then we
+need to restructure any algorithm to make best use of this locality.
+
+There are two types of locality that caches exploit
+
+#### Temporal locality
+
+This can be summarised pithily as:
+
+{{< hint info >}}
+
+If I access data at some memory address, it is likely that I will do
+so again "soon".
+
+{{< /hint >}}
+
+
+The idea is that the first time we access an address, it is loaded
+from main memory _and_ stored in the cache. We pay a small penalty
+for the first load (because the store to cache is not completely
+free), but subsequent accesses to that address use the copy in the
+cache and are much faster.
+
+As an example, consider a simple loop
+
+```c
+float s[16] = {0};
+for (int i = 0; i < N; i++) {
+  s[i%16] += a[i];
+}
+```
+
+where $N \gg 16$. In this case, each entry in `s` will be accessed
+multiple times, exhibiting _temporal locality_, and it makes sense to
+keep all of `s` in cache.
+
+#### Spatial locality
+
+Pithily summarised as
+
+{{< hint info >}}
+If I access data at some memory address, it is likely that I will
+access neighbouring memory addresses.
+{{< /hint >}}
+
+Again, when accessing an address for the first time, we load it from
+main memory _and_ store it in the cache. Additionally, we guess (or
+hope) that neighbouring addresses will also be used. So if we loaded
+an address `a`, we also load and store the data at addresses `a+1`,
+`a+2` (say). We pay a penalty for the first load (because we're moving
+more data), but hope that the next load is for `a+1` which will be
+fast.
+
+Consider the same loop again.
+```c
+float s[16] = {0};
+for (int i = 0; i < N; i++) {
+  s[i%16] += a[i];
+}
+```
+
+Access to `a` exhibits spatial locality. It makes sense when loading
+`a[i]` to also load `a[i+1]` since it will be used in the next
+iteration.
+
 
 ## Measurement
 
@@ -98,7 +193,7 @@ FIXME: add results
 Let us remind ourselves of the code we want to predict the performance
 of
 
-{{% columns %}}
+{{< columns >}}
 
 #### C code
 ```c
@@ -127,7 +222,7 @@ loop:
 result ← r1.0 + r1.1 + ... + r1.7
 ```
 
-{{% /columns %}}
+{{< /columns >}}
 
 The accumulation parameter `c` is held in a register. At each
 iteration of the vectorised loop, we load eight elements of `a` into a
@@ -234,7 +329,7 @@ to provide us some information on the layout of the system we are
 running on. It produces a schematic of the core and memory layout in
 ASCII, similar to the diagram below
 
-{{< manfig src="cacheschematic.png"
+{{< manfig src="cacheschematic.svg"
     width="70%"
     caption="Example layout of caches and memory for a 4 core system."
     >}}
@@ -247,7 +342,7 @@ To understand how parallelisation will affect the performance on real
 hardware, we need to know if will be limited by a resource which is
 scalable, or saturating.
 
-{{% columns %}}
+{{< columns >}}
 ### Scalable resources
 
 These resources are private to each core/chip. For example, CPU cores
@@ -257,7 +352,7 @@ number of floating point operations we can perform.
 As a consequence, if our code is limited by the floating point
 throughput, adding more cores is a useful thing to do.
 
-{{< autofig src="scalable-resource.png"
+{{< autofig src="scalable-resource.svg"
     width="100%"
     caption="Prototypical performance of a scalable resource" >}}
 
@@ -274,11 +369,11 @@ On a single chip, if our code is limited by the main memory bandwidth,
 adding more cores is _not_ useful. Instead we would need to add
 another chip (with another memory system).
 
-{{< autofig src="saturating-resource.png"
+{{< autofig src="saturating-resource.svg"
     width="100%"
     caption="Prototypical performance of a saturating resource" >}}
 
-{{% /columns %}}
+{{< /columns >}}
 
 You should explore this on Hamilton in [exercise 3]({{< ref
 "exercise03" >}})

@@ -1,6 +1,7 @@
 ---
 title: "Exercise 4: roofline analysis"
 weight: 4
+katex: true
 ---
 
 # A roofline analysis of matrix-vector multiplication
@@ -13,7 +14,7 @@ Finally, we will investigate loop blocking.
 
 ## Background
 
-I provide [an implementation]({{< code-ref 4 "dmvm.c" >}})[^1], in C, of double-precision
+I provide [an implementation]({{< code-ref 4 "dmvm.c" >}})[^1] in `code/exercise04/dmvm.c`, in C, of double-precision
 matrix-vector multiplication, which computes
 
 $$
@@ -36,6 +37,11 @@ performance. For example, after compiling and running with
       [examples](https://github.com/RRZE-HPC/Code-teaching) developed
       at [RRZE](https://www.rrze.fau.de/)
 
+{{< hint info >}}
+Instead of downloading these code individually you should [clone the
+repository]({{< repo >}}) on Hamilton and work in the appropriate
+`code/exerciseXX` subdirectory.
+{{< /hint >}}
 
 ## Setup
 
@@ -52,19 +58,19 @@ likwid/5.0.1`.
 
 You can use `wget` to download the code when logged in.
 
-{{% hint warning %}}
+{{< hint warning >}}
 Note: `wget` does not work on the compute nodes, so you should
 download any material on the login (frontend) node.
-{{% /hint %}}
+{{< /hint >}}
 
 ### Compilation without any optimisation
 
 First, we will compile without any optimisations.
 
-{{% hint warning %}}
+{{< hint warning >}}
 Normally you should not do this, but we want to see what the effect
 is!
-{{% /hint %}}
+{{< /hint >}}
 
 ```
 icc -std=c11 -O0 -o dmvm dmvm.c
@@ -78,38 +84,38 @@ You should now be able to run the `dmvm` binary with `./dmvm 4000
 To perform a roofline analysis, we need the machine and code
 characteristics.
 
-{{% task "1" %}}
+{{< exercise >}}
  Measure the main memory streaming memory bandwidth using
 the `triad` benchmark
 of `likwid-bench`.
-{{% /task %}}
+{{< /exercise >}}
 
-{{% task "2" %}}
+{{< exercise >}}
 Compute the peak floating point throughput of a compute node. A single
 core on the Hamilton nodes runs at 2.9GHz and can issues two double
 precision FMAs (fused multiply-add instructions) per cycle.
-{{% /task %}}
+{{< /exercise >}}
 
-{{% task "3" %}}
+{{< exercise >}}
 Read the code, in particular the `dmvm` function and
 determine the best case arithmetic intensity by counting data accesses
 (using the perfect cache model) and floating point operations.
-{{% /task %}}
+{{< /exercise >}}
 
 ## Produce a roofline plot of `-O0` compiled code
 
-{{% task "" %}}
+{{< exercise >}}
 
 Using a fixed number of columns \\(n_\text{col} = 10000\\), measure the performance of your `dmvm` binary over a range
 of row sizes from 1000 to 100000. Plot the resulting data using a
 roofline plot.
 
-{{% /task %}}
+{{< /exercise >}}
 
-{{% question %}}
+{{< question >}}
 What do you think your next step in optimising the code
 should be?
-{{% /question %}}
+{{< /question >}}
 
 ## Better compiler options
 
@@ -119,16 +125,16 @@ We'll stop crippling the compiler. Try these sets of compiler options:
 1. `icc -std=c11 -O3 -o dmvm dmvm.c`
 1. `icc -std=c11 -xCORE_AVX2 -unroll16 -mfma -O3 -o dmvm dmvm.c`
 
-{{% task "" %}}
+{{< exercise >}}
 Add the results you get from these runs to your roofline
 plots. What do you see? 
-{{% /task %}}
+{{< /exercise >}}
 
-{{% question %}}
+{{< question >}}
 Is performance for any of these
 options independent of the problem size? What do you think the
 bottleneck for this algorithm is?
-{{% /question %}}
+{{< /question >}}
 
 ## Loop blocking for out-of-cache performance
 
@@ -137,32 +143,32 @@ the performance of the code drops by almost a factor of two. When the
 number of rows is very large, some of the vector data (which is
 accessed more than once) no longer fits in cache.
 
-{{% task %}}
+{{< exercise >}}
 
 Use the pessimal cache model to obtain a worst case arithmetic
 intensity and add these new data points to your roofline plot.
 
-{{% /task %}}
+{{< /exercise >}}
 
 A mechanism to solve this problem is to traverse the data in an order
-that is aware of the cache. For loop-based code, this is called
-_loop blocking_ or _tiling_. I provide an implementation
-of [a simple scheme]({{< code-ref 4 "dmvm-blocked.c" >}}). Download
-and compile it, using the set of compiler options that worked best for
-the original code. Use `-o dmvm-blocked` to produce a new
-binary.
+that is aware of the cache. For loop-based code, this is called _loop
+blocking_ or _tiling_. I provide an implementation of [a simple
+scheme]({{< code-ref 4 "dmvm-blocked.c" >}}) in
+`code/exercise04/dmvm-blocked.c`. Compile it, using the set of
+compiler options that worked best for the original code. Use `-o
+dmvm-blocked` to produce a new binary.
 
-{{% task %}}
+{{< exercise >}}
 As before, using a fixed number of columns \\(n_\text{col} =
 10000\\), measure the performance of your
 `dmvm-blocked` binary over a range of row sizes from 1000
 to 100000. You should observe that the performance is now largely
 insensitive to the number of rows. Plot the resulting data using a
 roofline plot. 
-{{% /task %}}
+{{< /exercise >}}
 
-{{% question %}}
+{{< question >}}
 What do you think your next step (if any) in optimising
 the code should be?
-{{% /question %}}
+{{< /question >}}
 

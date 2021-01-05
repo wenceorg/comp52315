@@ -2,6 +2,7 @@
 title: "Exercise 1: sum reductions"
 weight: 1
 description: "Benchmarking"
+katex: true
 ---
 
 # Benchmarking with `likwid-bench`
@@ -87,15 +88,6 @@ See the [tips & tricks]({{< ref configuration.md >}}) advice for
 simplifying this process.
 {{< /hint >}}
 
-{{< hint warning >}}
-On the `DU Student` wifi, it turns out
-many people cannot directly ssh to Hamilton. to solve that you can
-bounce through the mira timesharing service. First `ssh
-yourusername@mira.dur.ac.uk`, and then ssh from there into
-Hamilton. Alternately, some people have reported success using
-`TheCloud`.
-{{< /hint >}}
-
 ### Using the batch system
 
 Hamilton is typical of a supercomputing cluster, in that the login (or
@@ -117,7 +109,7 @@ documentation](https://www.dur.ac.uk/cis/local/hpc/hamilton/slurm/).
 
 To request an interactive node, run
 ```
-srun --exclusive --pty $SHELL
+srun --pty $SHELL
 ```
 
 Note that Hamilton has a limited number of interactive compute nodes.
@@ -251,25 +243,26 @@ Broadwell E5-2650 v4](https://ark.intel.com/content/www/us/en/ark/products/91767
 which Intel claim has a max clock frequency of 2.9GHz. So we can see
 that this benchmark runs at almost exactly 1 scalar ADD per cycle.
 
-{{% task "1" %}}
+{{< exercise >}}
 Replicate the scalar sum reduction benchmark for
 yourself, to check you get similar results. Compare the results to the
 floating point performance obtained when you run the `sum_sp_avx`
 benchmark instead of the `sum_sp` benchmark.
-{{% /task %}}
+{{< /exercise >}}
 
-{{% question %}}
-What floating point throughput do you observe for the SIMD case?
-{{% /question %}}
+{{< question >}}
+What floating point throughput do you observe for the SIMD
+(`sum_sp_avx`) case?
+{{< /question >}}
 
-{{% task "2" %}}
+{{< exercise >}}
 1. Study what happens to the performance (for both the
    `sum_sp` and `sum_sp_avx` benchmarks) when
-   you change the size of the vector from 1kB up to 128MB.
+   you vary the size of the vector from 1kB up to 128MB.
 2. Produce a plot of performance with MFlops/s on the y axis and
    vector size on the x axis comparing the `sum_sp` and
    `sum_sp_avx` benchmarks.
-{{% /task %}}
+{{< /exercise >}}
 
 Rather than copying and pasting the output from every run into a data
 file, you might find it useful to script the individual benchmarking
@@ -280,7 +273,7 @@ runs. For example, to extract the MFlops/s from the
 likwid-bench -t sum_sp -w S0:16kB:1 | grep MFlops/s | cut -f 3
 ```
 
-{{% hint info %}}
+{{< hint info >}}
 #### Scripting the data collection
 For different vector sizes, you'll need to change the size,
 which can be done with a loop, for example to measure the
@@ -291,9 +284,9 @@ for size in 1kB 2kB 4kB; do
   echo $size $(likwid-bench -t sum_sp -w S0:$size:1 | grep MFlops/s | cut -f 3)
 done
 ```
-{{% /hint %}}
+{{< /hint >}}
 
-{{% question %}}
+{{< question >}}
 What do you observe about the performance of the scalar code and the
 SIMD code?
-{{% /question %}}
+{{< /question >}}

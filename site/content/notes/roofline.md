@@ -1,6 +1,7 @@
 ---
 title: "Performance models: roofline"
 weight: 3
+katex: true
 ---
 
 # Models of performance
@@ -21,7 +22,7 @@ solution_ for a given code.
 Our goal is then to come up with a hypothesis-driven optimisation
 cycle. A simple flow diagram is shown below
 
-{{< manfig src="optimisationworkflow.png"
+{{< manfig src="optimisationworkflow.svg"
     width="30%"
     caption="Simplified flow diagram for deciding on next steps when optimising code" >}}
 
@@ -37,17 +38,17 @@ most effective.
 To do this, we need to construct some models, we'll see a number of
 approaches in this course, the first one we'll consider is the
 [_roofline model_](https://doi.org/10.1145/1498765.1498785). This is a
-simple model for loopy heavy code.
+simple model for loop heavy code.
 
 ## Roofline model
 
 The roofline model has a simple view of both hardware and software
 
-{{% columns %}}
+{{< columns >}}
 
 ### Simple view of hardware
 
-{{< manfig src="rooflinecpumodel.png"
+{{< manfig src="rooflinecpumodel.svg"
     width="100%" >}}
 
 <--->
@@ -57,9 +58,9 @@ The roofline model has a simple view of both hardware and software
 ```c
 /* Possibly nested loops */
 for (i = 0; i < ...; i++)
- /* Complicated code doing */
- /* N FLOPs causing
- /* B bytes of data transfer */
+ /* Complicated code doing
+    - N FLOPs causing
+    - B bytes of data transfer */
 ```
 
 This allows us to characterise the code using a single number, its
@@ -69,7 +70,7 @@ $$
 I_c = \frac{N}{B}
 $$
 
-{{% /columns %}}
+{{< /columns >}}
 
 To this characterisation of the software, we add two numbers that
 characterise the hardware

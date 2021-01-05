@@ -27,31 +27,31 @@ The default blocking factors (`MR` and `NR`) are both 1. Given that
 AVX registers can hold four doubles, it makes sense to use larger
 blocks.
 
-{{% task %}}
+{{< exercise >}}
 
 Try with some larger blocks and `-O3` instead of `-O2`
 
-{{% /task %}}
+{{< /exercise >}}
 
-{{% question %}}
+{{< question >}}
 
 Which loop, if any, was vectorised this time?
 
-{{% /question %}}
+{{< /question >}}
 
 ## Vectorising the correct loops
 
 Since the `i` loop is stride-1, it really makes sense to vectorise the
 innermost loop. Try and convince the compiler to do so.
 
-{{% question %}}
+{{< question >}}
 
 Compare the estimated speedup the compiler reports for the original
 loop vectorisation choice and the new one.
 
 What do you observe?
 
-{{% /question %}}
+{{< /question >}}
 
 ## Providing more detailed information
 
@@ -64,13 +64,13 @@ Use [`__assume_aligned(PTR,
 64)`](https://software.intel.com/en-us/articles/data-alignment-to-assist-vectorization)
 to promise to the compiler that the given pointer is 64-byte aligned.
 
-{{% question %}}
+{{< question >}}
 
 Try adding alignment assumptions before the start of the loop nest.
 
 What happens to the estimated speedup?
 
-{{% /question %}}
+{{< /question >}}
 
 ## Trying to maximise throughput
 
@@ -101,8 +101,8 @@ replicate the value of `B[j]` over all lanes of the vector register.
 That is, inside the `i` loop, we need as many registers for `B` as the
 unroll factor of the `j` loop.
 
-{{% question %}}
+{{< question >}}
 
 What's the maximum estimated speedup you can achieve?
 
-{{% /question %}}
+{{< /question >}}
