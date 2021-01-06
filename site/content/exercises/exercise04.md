@@ -1,5 +1,5 @@
 ---
-title: "Exercise 4: roofline analysis"
+title: "Roofline analysis"
 weight: 4
 katex: true
 ---

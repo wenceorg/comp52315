@@ -1,5 +1,5 @@
 ---
-title: "Exercise 7: loop tiling matrix transpose"
+title: "Loop tiling matrix transpose"
 weight: 7
 katex: true
 ---

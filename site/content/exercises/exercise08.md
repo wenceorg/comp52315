@@ -1,5 +1,5 @@
 ---
-title: "Exercise 8: loop tiling matrix-matrix multiplication"
+title: "Loop tiling matrix-matrix multiplication"
 weight: 8
 katex: true
 ---

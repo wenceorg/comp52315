@@ -1,5 +1,5 @@
 ---
-title: "Exercise 3: memory bandwidth"
+title: "Memory bandwidth"
 weight: 3
 ---
 

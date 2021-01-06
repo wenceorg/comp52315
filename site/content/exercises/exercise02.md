@@ -1,5 +1,5 @@
 ---
-title: "Exercise 2: caches"
+title: "Caches"
 weight: 2
 ---
 

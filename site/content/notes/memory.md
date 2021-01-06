@@ -16,7 +16,10 @@ In doing so, you produced a plot of the performance (in terms of
 floating point throughput) as a function of array size. You should
 have observed something similar to that shown here.
 
-FIXME: add figure
+{{< autofig
+    src="sum-reduction-throughput.svg"
+    width="60%"
+    caption="Scalar and AVX-enabled throughput of vector dot product as measured with `likwid-bench`." >}}
 
 We see that the <abbr title="Single Instruction Multiple
 Data">SIMD</abbr> (vectorised) code has four distinct performance
@@ -41,7 +44,7 @@ can go to [μops.info](https://uops.info) and look at their interactive
 {{< /hint >}}
 
 We can see that the vector code achieves peak throughput for small
-vectors, but not large ones. Why is this?
+vectors, but not large ones. Let us try and understand why.
 
 Remember that as well as thinking about the [primary resource]({{< ref
 "introduction.md#resource-bottleneck-instruction-throughput" >}}) of
@@ -74,15 +77,23 @@ We have something close to the following picture
     width="70%"
     caption="As memory gets larger, it must become slower, both in latency and bandwidth" >}}
 
+Typical CPUs have three or more levels of cache that get both larger
+and slower as we get closer to main memory (and further in latency
+from the CPU). So we'll often refer to L1 or L2 cache (or similar).
+
+{{< hint info >}}
 To explore these latencies in more depth (and see how they've changed
 over time), see [latency numbers every programmer should
 know](https://colin-scott.github.io/personal_website/research/interactive_latency.html).
+{{< /hint >}}
 
 ## Caches
 
 Having identified the high level problem that we can't make large,
 fast memory, what can chip designers do about it? The answer (on CPUs
-at least) is _caches_. 
+at least) is _caches_. As usual, wikipedia has a pretty [detailed
+description](https://en.wikipedia.org/wiki/CPU_cache), we'll cover the
+main points here.
 
 The idea is that we add a hierarchy of small, fast memory. These keep
 a copy of _frequently used_ data and are used to speed up access.
@@ -175,16 +186,184 @@ Access to `a` exhibits spatial locality. It makes sense when loading
 iteration.
 
 
-## Measurement
+### High-level design of caches
 
-As well as using
+To understand how to write software that deals with caches
+efficiently, it is helpful to understand a little of how they work in
+hardware.
+
+Each piece of data in our program is uniquely identifiable by its
+_address_ in memory. This is a 32 or (these days usually) 64bit
+value which refers to a single byte in memory.
+
+Let's look at this. In C we can use the `%p` format specifier to print
+the address of a pointer in hexadecimal. We can also, with a bit of
+trickery, print it in binary.
+
+{{< code-include "snippets/print-address.c" "c" >}}
+
+Compile and run it with
+
+```
+$ cc -o print-address print-address.c
+$ ./print-address
+Address of a    is: 0x7ffee015022c 00000000_00000000_01111111_11111110_11100000_00010101_00000010_00101100
+
+Address of b[0] is: 0x7fa6e0405820 00000000_00000000_01111111_10100110_11100000_01000000_01011000_00100000
+Address of b[1] is: 0x7fa6e0405828 00000000_00000000_01111111_10100110_11100000_01000000_01011000_00101000
+Address of b[2] is: 0x7fa6e0405830 00000000_00000000_01111111_10100110_11100000_01000000_01011000_00110000
+Address of b[3] is: 0x7fa6e0405838 00000000_00000000_01111111_10100110_11100000_01000000_01011000_00111000
+
+Address of c[0] is: 0x7fa6e0405840 00000000_00000000_01111111_10100110_11100000_01000000_01011000_01000000
+Address of c[1] is: 0x7fa6e0405844 00000000_00000000_01111111_10100110_11100000_01000000_01011000_01000100
+Address of c[2] is: 0x7fa6e0405848 00000000_00000000_01111111_10100110_11100000_01000000_01011000_01001000
+Address of c[3] is: 0x7fa6e040584c 00000000_00000000_01111111_10100110_11100000_01000000_01011000_01001100
+```
+
+You may get different values.
+
+We see that each array has values with contiguous addresses. In
+building our cache, we need to decide how to store a value at a given
+address in our cache.
+
+The simplest form of cache is a _direct-mapped_ cache (more
+complicated caches are built out of these). Suppose it can store $2^N$
+bytes of data. We divide it into blocks, each of $2^M$ bytes ($M <
+N$). Each address references one byte, so we need to use $N$ _bits_ of
+the address to select which slot in the cache to use. A picture can
+help
+
+{{< manfig
+    src="cache-layout.svg"
+    width="70%"
+    caption="Schematic of a cache with block size $2^M$ and capacity $2^N$" >}}
+
+We reserve the lowest $N$ bits of the address (the rightmost) to
+compute a 2D cache location. Each address is mapped into one of the
+$2^{N-M}$ _blocks_. The correct byte is located with the lowest $M$
+bits. Finally the high bits of the address are used as a key.
+
+Data are loaded into the cache one _block_ at a time (these are also
+called _cache lines_). So if we access an address that access byte 4 of
+block 2 (say), then we load data from an address that lives at byte 0
+of block 2 up to byte $2^M$.
+
+{{< manfig
+    src="cache-line-load.svg"
+    width="70%"
+    caption="Data are loaded in full cache lines, even when we only request a single byte." >}}
+
+By loading data in cache lines, we immediately exploit _spatial
+locality_. The optimal size of the block is a function of the total
+cache size and the particular data access patterns. So almost all CPUs
+have arrived at the same tradeoff of using a 64 Byte cache line.
+
+{{< hint info >}}
+A consequence of this loading strategy is that _cache-friendly_
+algorithms work on cache line sized chunks of data at a time. That is,
+we should endeavour, when loading data, to use the entire cache line.
+{{< /hint >}}
+
+#### Eviction from caches
+
+Recall that our cache is much _smaller_ than the total size of main
+memory. So it is possible that we will want to load more data than fit
+in a cache. If two different addresses have the same low bit pattern,
+they will be mapped to the same location in the cache. We only have
+space to store one of them, so we have a _conflict_.
+
+Since the more recently requested data is required _now_, our
+resolution is to _evict_ the older data and replace it with the new
+address (this is an LRU (least recently used) eviction policy).
+
+Let's think about what can go wrong with this policy. Consider a
+simple example where we perform the following loop.
+
+```c
+int a[64];
+int b[64];
+int r = 0;
+for (int i = 0; i < 100; i++) {
+  for (int j = 0; j < 64; j++) {
+    r += a[j] + b[j];
+  }
+}
+```
+
+Let's imagine executing this on a system where each `int` requires
+four bytes and we have a single direct-mapped cache with total size
+1KB and a 32 byte cache line. So we have $N = 10$ and $M=5$ and there
+are 32 lines in the cache.
+
+Each cache line therefore holds eight `int`s, and we need eight cache
+lines for `a` and eight cache lines for `b`. This is 16 total lines
+which is less than the cache size (so everything should be fine?).
+
+A problem occurs if entries in `a` and `b` map to the _same_ cache
+lines. In this circumstance, an entry from `a` will be loaded, filling
+a line, then an entry from `b` will be loaded, filling the same line
+and evicting `a`. Then we move to the next iteration where we load
+`a`, evicting `b` and so forth.
+
+In the worst case, `a` and `b` map to exactly the same lines and we
+reduce the _effective_ size of a cache from 1KB to 32bytes.
+
+This phenomenon is known as _cache thrashing_, there's a nice worked
+example
+[here](https://cs233.github.io/thrashingandassociativityexample.html),
+that page also has some other [worked
+examples](https://cs233.github.io/otherresources.html) on mapping
+arrays into caches.
+
+To avoid mitigate against this problem, actual CPUs normally have
+slightly more complicated caches. Typically they use $k$-way set
+associative caches.
+
+A $k$-way set associative cache behave like k "copies" of a direct
+mapped cache. Each block of main memory can map to one of $k$ cache
+lines, which are termed _sets_. Usually, hardware designers choose $k
+\in \\{2, 4, 8, 16\\}$. For example, [Intel Skylake chips](https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server)#Memory_Hierarchy) have $k = 8$
+for level 1 caches, $k = 16$ for level 2, and $k = 11$ for level 3.
+
+A $k$-way cache, can handle up to $k$ different addresses mapping to
+the same cache location without a reduction in the perceived size of
+the cache. This comes at a cost of increased complexity in
+the chip design, and marginally increased latency: looking up and
+loading data from a direct-mapped cache is slightly faster than
+looking it up in a $k$-way cache.
+
+However, they are not a silver bullet, as soon as we are handling more
+than $k$ addresses that might map to the same location, we have the
+same eviction problem.
+
+### Programming cache friendly algorithms
+
+To mitigate against some of these effects, if we know that the data
+we'll be working on should fit in cache it is sometimes beneficial to
+explicitly copy it into an appropriate sized buffer and then work on
+the buffer. We will see an example of this in [exercise 8]({{< ref
+"exercise08.md" >}}).
+
+## Measurement of cache bandwidth
+
+As well as providing lower latency data access, caches also provide
+larger memory bandwidth (the rate at which data can be fetched from
+the cache to the CPU).
+
+We can use
 [likwid-bench](https://github.com/RRZE-HPC/likwid/wiki/Likwid-Bench)
-to measure floating point throughput of some simple loops, we can also
-use it to measure memory bandwidth. In [exercise 2]({{< ref
-"exercise02.md" >}}) you should do this to determine the cache
-and main memory bandwidth on the Hamilton cores. We will use this to
-construct a predictive model of the floating point throughput of the
-reduction from [exercise 1]({{< ref "exercise01.md" >}}).
+to measure memory bandwidth. In [exercise 2]({{< ref "exercise02.md"
+>}}) you should do this to determine the cache and main memory
+bandwidth on the Hamilton cores. We will use this to construct a
+predictive model of the floating point throughput of the reduction
+from [exercise 1]({{< ref "exercise01.md" >}}).
+
+{{< exercise >}}
+
+Now is a good time to attempt [exercise 2]({{< ref "exercise02.md"
+>}}).
+
+{{< /exercise >}}
 
 FIXME: add results
 
@@ -198,7 +377,7 @@ of
 #### C code
 ```c
 float reduce(int N, 
-    const double *restrict a)
+             const double *restrict a)
 {
   float c = 0;
   for (int i = 0; i < N; i++)
@@ -228,6 +407,31 @@ The accumulation parameter `c` is held in a register. At each
 iteration of the vectorised loop, we load eight elements of `a` into a
 recond register. Since each `float` value takes 4 bytes, this means
 that each iteration of the loop requires 32 bytes of data.
+
+{{< hint info >}}
+
+If you don't know the size (in bytes) of C datatypes off the top of
+your head, you can always determine them by writing some C code to
+print them out using
+[sizeof](https://en.cppreference.com/w/c/language/sizeof):
+
+```c
+#include <stdio.h>
+int main(void)
+{
+  printf("Size of float: %lu\n", sizeof(float));
+}
+```
+
+{{< details "Size in bits" >}}
+If we want to know how many bits there are in a byte, we should
+technically check the value of the macro `CHAR_BIT` (defined in
+`<limits.h>`). On all systems you are likely to encounter, it is 8.
+See [CPP reference on
+sizeof](https://en.cppreference.com/w/c/language/sizeof) for more
+information.
+{{< /details >}}
+{{< /hint >}}
 
 Recall that we can run one `ADD` per cycle. To keep up with the
 addition, the memory movement must therefore deliver 32 bytes/cycle.
@@ -275,6 +479,11 @@ For main memory, the memory bandwidth is around 13Gbyte/s or
 Let's redraw our floating point throughput graph, this time annotating
 it with these predicted performance limits.
 
+{{< autofig src="sum-reduction-throughput-annotated.svg"
+    width="60%"
+    caption="AVX-enabled throughput of sum reduction as measured with `likwid-bench`. Annotated with simple performance limits from our measurements of cache bandwidth." >}}
+
+
 We can see that this simple model does a pretty good job of predicting
 the performance of our test code.
 
@@ -283,6 +492,7 @@ the performance of our test code.
 This idea of predicting performance based on resource limits is a
 powerful one, and we will return to it through the rest of the course.
 
+{{< exercise >}}
 As a practice, see if you can come up with throughput limits for the
 following piece of code
 
@@ -308,6 +518,8 @@ a_i ← b_i * alpha + c_i
 
 Which is implemented as a single instruction `FMA`. Broadwell chips
 can execute up to two `FMA` instructions per cycle.
+
+{{< /exercise >}}
 
 We will revisit this in a [later exercise]({{< ref "exercise05.md" >}}).
 

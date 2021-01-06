@@ -1,5 +1,5 @@
 ---
-title: "Exercise 5: models and measurements"
+title: "Models and measurements"
 weight: 5
 ---
 

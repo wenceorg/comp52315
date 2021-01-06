@@ -1,5 +1,5 @@
 ---
-title: "Exercise 1: sum reductions"
+title: "Sum reductions"
 weight: 1
 description: "Benchmarking"
 katex: true

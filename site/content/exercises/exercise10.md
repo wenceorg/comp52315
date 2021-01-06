@@ -1,5 +1,5 @@
 ---
-title: "Exercise 10: stencil layer conditions"
+title: "Stencil layer conditions"
 weight: 10
 katex: true
 ---

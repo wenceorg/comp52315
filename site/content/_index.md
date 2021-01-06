@@ -40,6 +40,14 @@ There are a bunch of exercises which we'll mostly work on in the live
 sessions, their aim is to familiarise you with the tools we'll use for
 performance measurements and modelling throughout the course.
 
+As well as the listed exercises, the notes also contain shorter
+exercises which you should attempt. We can discuss them in the live
+sessions.
+
+{{< exercise >}}
+Exercises look like this.
+{{< /exercise >}}
+
 ## Syllabus
 
 - Fundamentals of performance engineering

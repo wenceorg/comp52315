@@ -29,7 +29,7 @@ disableKinds = ['taxonomy', 'taxonomyTerm']
 BookSection = '/'
 BookSearch = false
 BookComments = false
-BookToc = false
+BookToc = true
 BookRepo = 'https://github.com/wenceorg/comp52315'
 BookLogo = 'logo.svg'
 ModulePage = 'https://www.dur.ac.uk/postgraduate.modules/module_description/?year=2020&module_code=COMP52315'

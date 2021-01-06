@@ -1,5 +1,5 @@
 ---
-title: "Exercise 6: profiling"
+title: "Profiling"
 weight: 6
 ---
 

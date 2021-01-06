@@ -1,5 +1,5 @@
 ---
-title: "Exercise 9: compiler feedback"
+title: "Compiler feedback"
 weight: 9
 ---
 
