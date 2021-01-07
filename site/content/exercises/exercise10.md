@@ -1,6 +1,7 @@
 ---
-title: "Exercise 10: stencil layer conditions"
+title: "Stencil layer conditions"
 weight: 10
+katex: true
 ---
 
 # Loop tiling for stencil codes
@@ -8,7 +9,7 @@ weight: 10
 We're going to investigate the _layer condition_ loop tiling
 guidance for stencil codes. We'll use as an exemplar the five-point
 finite difference stencil for the Laplacian on a [regular grid]({{<
-code-ref 10 "fivepoint.c" >}}).
+code-ref 10 "fivepoint.c" >}}) in `code/exercise10/fivepoint.c`.
 
 The layer condition model was developed by a group at Erlangen, and
 they provide an [interactive
@@ -35,28 +36,28 @@ For fewer than 10,000 rows, set the number of columns equal to the
 number of rows. For more than 10,000 rows, keep the product of rows
 and columns approximately constant at \\(10^9\\).
 
-{{% question %}}
+{{< question >}}
 
 What happens to the performance when you vary the number of rows from
 1000 up to 100,000,000?
 
-{{% /question %}}
+{{< /question >}}
 
-{{% task %}}
+{{< exercise >}}
 
 Produce a plot of MLUP/s against row size. 
 
-{{% /task %}}
+{{< /exercise >}}
 
-{{% question %}}
+{{< question >}}
 
 Do you observe any tell-tale drops in performance?
 
-{{% /question %}}
+{{< /question >}}
 
 ## Throughput of tiled loops
 
-{{% task %}}
+{{< exercise >}}
 
 Repeat the above study, this time with the tiled version. Try
 calculating appropriate blocking sizes for both L2 and L3 caches using
@@ -64,13 +65,13 @@ the layer condition we discussed in lectures. Add the performance you
 achieve with the two different blocking factors to your plot of the
 untiled code.
 
-{{% /task %}}
+{{< /exercise >}}
 
-{{% question %}}
+{{< question >}}
 
 What do you observe?
 
-{{% /question %}}
+{{< /question >}}
 
 ## Validation of the data movement model
 
@@ -79,13 +80,13 @@ likwid-perfctr support. `icc -xBROADWELL -O3 -DLIKWID_PERFMON -o
 fivepoint fivepoint.c -llikwid`. The update loop is instrumented with
 likwid markers. Measure the `MEM_DP` group. 
 
-{{% question %}}
+{{< question >}}
 
 What is the measured number of bytes of data required per LUP? 
 
 Does it match your expectations?
 
-{{% /question %}}
+{{< /question >}}
 
 ## Vectorisation
 
@@ -95,10 +96,10 @@ report to see if you can work out why it was, or was not, vectorised.
 If no vectorisation was enabled, see if you can convince the compiler
 to vectorise through judicious use of `#pragma omp simd` annotations.
 
-{{% question %}}
+{{< question >}}
 Does managing to enable vectorisation change any of  the results of
 the previous sections at all?
 
-{{% /question %}}
+{{< /question >}}
 
 

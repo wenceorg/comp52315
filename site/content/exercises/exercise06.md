@@ -1,5 +1,5 @@
 ---
-title: "Exercise 6: profiling"
+title: "Profiling"
 weight: 6
 ---
 
@@ -61,13 +61,13 @@ to add `-pg` to the compile and link flags (do this by
 modifying the `CCFLAGS` and `LINKFLAGS`
 variables). Now run `make intel` again.
 
-{{% hint "info" %}}
+{{< hint "info" >}}
 For more information on gprof, the HPC centre at Lawrence Livermore
 have a [useful introductory
 tutorial](https://hpc.llnl.gov/software/development-environment-software/gprof#documentation).
-{{% /hint %}}
+{{< /hint >}}
 
-{{% task %}}
+{{< exercise >}}
 1. Profile the default run on a compute node. This should
    produce a `gmon.out` file.
 1. Produce the gprofile output with `gprof ./miniMD_Intel gmon.out`
@@ -75,15 +75,15 @@ tutorial](https://hpc.llnl.gov/software/development-environment-software/gprof#d
    text file by appending `> SOMETEXTFILE.txt` to the
    command and then look at it in an editor)
 
-{{% /task %}}
+{{< /exercise >}}
 
-{{% question %}}
+{{< question >}}
 
 Where does the code spend most of its time?
 
-{{% /question %}}
+{{< /question >}}
 
-{{% task %}}
+{{< exercise >}}
 
 `miniMD` implements a few different algorithms
 which can be selected with command line options and choosing
@@ -94,15 +94,15 @@ the right input file. Run profiling for the following sets of options.
 1. `./miniMD_intel -i in.eam.miniMD --half_neigh 0`
 1. `./miniMD_intel -i in.eam.miniMD --half_neigh 1`
 
-{{% /task %}}
+{{< /exercise >}}
 
-{{% question %}} 
+{{< question >}} 
 Do you always see the same functions at the top of
 the profile?
 
-{{% /question %}}
+{{< /question >}}
 
-{{% hint "warning" %}}
+{{< hint "warning" >}}
 
 Note: a program instrumented with gprof will always write its output
 to `gmon.out` (overwriting any previous information). So
@@ -110,7 +110,7 @@ you should make sure to move the `gmon.out` from each run
 to a unique name (perhaps describing briefly what you did) before
 running the next benchmark.
 
-{{% /hint %}}
+{{< /hint >}}
 
 ### Generating graphical call graphs from gprof output
 
@@ -180,11 +180,11 @@ LIKWID_MARKER_STOP("SOMEAPPROPRIATENAME");
 ```
 before the function returns.
 
-{{% hint "warning" %}}
+{{< hint "warning" >}}
 Be careful to check that the function
 doesn't `return` anywhere before reaching
 the `LIKWID_MARKER_STOP` call.
-{{% /hint %}}
+{{< /hint >}}
 
 Finally, edit `ljs.cpp` and add [the includes]({{< ref "#ref:includes"
 >}}) near the top of the file (as before). In the `main` function, add
@@ -210,36 +210,36 @@ you should see `Running without Marker API. Activate Marker API with
 successfully add all the performance monitoring, but are not yet using
 `likwid-perfctr`).
 
-{{% task %}} 
+{{< exercise >}} 
 
 Run a profile of the memory and floating point performance using
 `likwid-perfctr -C 0 -g MEM_DP -m ./miniMD_intel -i in.lj.miniMD
 --half_neigh 1`.
 
-{{% /task %}}
+{{< /exercise >}}
 
-{{% question %}}
+{{< question >}}
 
 What computational intensity do you observe? For this computational
 intensity, is the code at the roofline limit?
           
-{{% /question %}}
+{{< /question >}}
 
-{{% task %}}
+{{< exercise >}}
 
 Try the same profiling, but this time with with `--half_neigh 0` and
 the `in.eam.miniMD` input file.
 
-{{% /task %}}
+{{< /exercise >}}
 
-{{% question %}}
+{{< question >}}
 
 Do you notice any differences in the profiles?
 
-{{% /question %}}
+{{< /question >}}
 
-{{% question %}}
+{{< question >}}
 
 Can you suggest some next steps to try and improve performance?
 
-{{% /question %}}
+{{< /question >}}

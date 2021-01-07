@@ -1,6 +1,7 @@
 ---
 title: "Introduction"
 weight: 1
+katex: true
 ---
 
 # Resources in stored program computers
@@ -17,8 +18,8 @@ executed and the data for the program. This is attached to a processor
 instructions in the program code along with further parts of logical
 control and load/store of data.
 
-{{< manfig src="CPU.png"
-   width="70%"
+{{< manfig src="CPU.svg"
+   width="50%"
    caption="High level view of processor architecture and resource use" >}}
 
 From a (simplified) hardware designer's point of view, the primary
@@ -134,8 +135,8 @@ a sequential stream of instructions and the abstract hardware
 sequentially executes instructions. In this model each instruction
 completes before the next one starts
 
-{{< manfig src="vonneumann.png"
-   width="70%"
+{{< manfig src="vonneumann.svg"
+   width="50%"
    caption="Diagram of the abstract machine model for the von Neumann architecture" >}}
    
 This was a reasonable match with reality when first introduced in the
@@ -175,9 +176,9 @@ and the `STORE`). This is shown graphically below.
 
 {{% /columns %}}
 
-{{< manfig src="addlatency.png"
+{{< manfig src="addlatency.svg"
     width="70%"
-    caption="Comparison of throughput for different `ADD` latencies">}}
+    caption="Comparison of throughput for different `ADD` latencies with time (in clock cycles) running from left to right">}}
 
 
 ### Strategies for faster chips
@@ -216,9 +217,9 @@ abstraction von Neumann model.
 
 We'll briefly mention three:
 
-1. Superscalar execution
-2. Pipelining
-3. Out of order execution
+1. [Superscalar execution](https://en.wikipedia.org/wiki/Superscalar_processor)
+2. [Pipelining](https://en.wikipedia.org/wiki/Instruction_pipelining)
+3. [Out of order execution](https://en.wikipedia.org/wiki/Out-of-order_execution)
 
 Typical CPUs can issue _more than one_ instruction per cycle (modern
 Intel CPUs can issue up to four per cycle). As long are there are no
@@ -228,7 +229,7 @@ throughput.
 For our simple addition example, the two loads are independent, so
 superscalar execution might look something like the figure below.
 
-{{< manfig src="addsuperscalar.png"
+{{< manfig src="addsuperscalar.svg"
    width="70%"
    caption="Superscalar execution saves one cycle." >}}
 
@@ -249,7 +250,7 @@ instructions "in flight" simultaneously (in the pipeline). So once the
 pipeline is full, we observe _throughput_ of one instruction per cycle
 (rather than one instruction every four cycles).
 
-{{< manfig src="pipeline.png"
+{{< manfig src="pipeline.svg"
    width="70%"
    caption="Pipelines can hide latency if many identical instructions are issued." >}}
 
@@ -268,7 +269,7 @@ instruction has a three cycle latency. By interleaving the
 instructions from the second iteration before the store of the first
 iteration, we can completely hide the `ADD` latency.
 
-{{< manfig src="addoutoforder.png"
+{{< manfig src="addoutoforder.svg"
    width="70%"
    caption="Out of order execution hides instruction latency" >}}
 
@@ -304,9 +305,9 @@ If we restrict ourselves to thinking about double precision values
 eight such values. The slots in the register are called _vector
 lanes_.
 
-{{< manfig src="registerwidth.png"
-   width="70%"
-   caption="Vector registers." >}}
+{{< manfig src="registerwidth.svg"
+   width="50%"
+   caption="Vector registers, showing slots for double precision values." >}}
 
 The idea is that these registers hold multiple values, and the
 instructions in which they take part operate on multiple values in one
@@ -319,7 +320,7 @@ go.
 Standard scalar operations for this addition loop produce one output
 element per instruction
 
-{{< manfig src="scalaradd.png"
+{{< manfig src="scalaradd.svg"
    width="100%" >}}
    
 <--->
@@ -329,7 +330,7 @@ element per instruction
 AVX addition (256 bit registers) produces four output elements per
 instruction.
 
-{{< manfig src="vectoradd.png"
+{{< manfig src="vectoradd.svg"
    width="100%" >}}
 
 {{% /columns %}}

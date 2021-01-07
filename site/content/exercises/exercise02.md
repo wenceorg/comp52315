@@ -1,5 +1,5 @@
 ---
-title: "Exercise 2: caches"
+title: "Caches"
 weight: 2
 ---
 
@@ -75,27 +75,27 @@ UOPs:                   3758096384
 --------------------------------------------------------------------------------
 ```
 
-{{% task "1" %}}
+{{< exercise >}}
 Produce a plot of memory bandwidth as a function of the size vector
 being streamed from 1kB up to 1GB for each of the three different
 benchmarks.
 
 As before, you can script this data collection with a [bash loop]({{<
 ref "exercise01.md#scripting-the-data-collection" >}}).
-{{% /task %}}
+{{< /exercise >}}
 
-{{% question %}}
+{{< question >}}
 What do you observe about the available memory bandwidth? Is the
 bandwidth the same for 1kB and 1GB vectors?
-{{% /question %}}
+{{< /question >}}
 
-{{% task "2" %}}
+{{< exercise >}}
 Use `likwid-topology` to find out about the
 different sizes of cache available on the system. You can find
 out how to use it by providing the `-h`
 command-line flag. The graphical output is most useful.
-{{% /task %}}
-{{% question %}}
+{{< /exercise >}}
+{{< question >}}
 Can you use the output from `likwid-topology` to explain and
 understand your memory bandwidth results?
-{{% /question %}}
+{{< /question >}}

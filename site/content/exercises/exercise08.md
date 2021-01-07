@@ -1,6 +1,7 @@
 ---
-title: "Exercise 8: loop tiling matrix-matrix multiplication"
+title: "Loop tiling matrix-matrix multiplication"
 weight: 8
+katex: true
 ---
 
 # Simple loop tiling for matrix-matrix multiplication
@@ -10,7 +11,8 @@ throughput of matrix transpose operations in [exercise 7]({{< ref
 "exercise07.md" >}}), we're now going to look at throughput of the
 loop-tiling scheme presented in lectures for matrix-matrix
 multiplication. I provide an implementation of [matrix-matrix
-multiplication]({{< code-ref 8 "gemm.c" >}}) that provides three
+multiplication]({{< code-ref 8 "gemm.c" >}}) in
+`code/exercise08/gemn,c` that provides three
 different variants. A naive triple loop, a tiled version of the triple
 loop, and a tiled version that manually packs local buffers.
 
@@ -35,15 +37,15 @@ or `TILEDPACKED`.
 For the `TILED` and `TILEDPACKED` variants, the matrix size must be a
 multiple of the tile size (which is 64 by default).
 
-{{% task %}}
+{{< exercise >}}
 
 Run the code with matrix sizes from 64 up to 2048.
 
-{{% /task %}}
+{{< /exercise >}}
 
-{{% question %}}
+{{< question >}}
 Which version performs the best?
-{{% /question %}}
+{{< /question >}}
 
 ## Inspecting optimisation reports
 
@@ -60,12 +62,12 @@ resulting `no-simd-reduction.txt` file and search for
 `tiled_packed_gemm` (the name of the routine that performs worse than
 expected). 
 
-{{% question %}}
+{{< question >}}
 
 Do you see anything in the optimisation report that stands out as
 interesting?
 
-{{% /question %}}
+{{< /question >}}
 
 
 In this case, it seems that we need to give the compiler a hint as to
@@ -91,35 +93,35 @@ for (p = 0; p < TILESIZE; p++) {
 c[j_*ldc + i_] += c_;
 ```
 
-{{% task %}}
+{{< exercise >}}
 
 Try compiling again, this time adding `-DSIMD_REDUCTION` to the
 compile line (and changing the output file for the optimisation report
 to `simd-reduction.txt`
 
-{{% /task %}}
+{{< /exercise >}}
 
-{{% question %}}
+{{< question >}}
 
 Look at the new optimisation report and see what the compiler reports
 this time.
 
 Did it manage to vectorise the loop?
 
-{{% /question %}}
+{{< /question >}}
 
-{{% task %}}
+{{< exercise >}}
 
 Benchmark this new version of the `TILEDPACKED` variant using the same
 set of matrix sizes as before.
 
-{{% /task %}}
+{{< /exercise >}}
 
-{{% question %}}
+{{< question >}}
 
 Do you observe any change in the performance?
 
-{{% /question %}}
+{{< /question >}}
 
 ## The effects of tiling on memopry movement
 
@@ -130,18 +132,18 @@ matrix. We'll need to recompile with likwid enabled for this, so
 `module load likwid/5.0.1` and recompile, adding `-DLIKWID_PERFMON
 -llikwid` to the compilation flags.
 
-{{% task %}}
+{{< exercise >}}
 
 Measure the memory and floating point performance for the three
 different variatnts using \\(N = 3072\\) using the `MEM_DP` group.
 
-{{% /task %}}
+{{< /exercise >}}
 
-{{% question %}}
+{{< question >}}
 
 What do you observe in terms of arithmetic intensity and the total
 volume of data moved from main memory?
 
 Can you relate this to the simple model we set up in lectures?
 
-{{% /question %}}
+{{< /question >}}

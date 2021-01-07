@@ -5,4 +5,5 @@
 /site/static/images/auto
 /site/static/code
 /figures/*.png
+/figures/*.svg
 /figures/*.pdf

@@ -29,18 +29,34 @@ goal is to
 2. Construct _models_ that explain the behaviour;
 3. Use these models to determine, and then apply, appropriate
    optimisations.
-   
+
+## Course Organisation
+
+The course will run over four weeks starting on 11th January 2021.
+Each week there will be two sessions run via Teams, scheduled at 9am
+on Mondays and 4pm on Tuesdays (UK time).
+
+There are a bunch of exercises which we'll mostly work on in the live
+sessions, their aim is to familiarise you with the tools we'll use for
+performance measurements and modelling throughout the course.
+
+As well as the listed exercises, the notes also contain shorter
+exercises which you should attempt. We can discuss them in the live
+sessions.
+
+{{< exercise >}}
+Exercises look like this.
+{{< /exercise >}}
 
 ## Syllabus
 
-Fundamentals of performance engineering
+- Fundamentals of performance engineering
+- Tools: CPU topology and affinity
+- The Roofline performance model
+- Tools: Performance counters
+- Technique: Vectorisation (SIMD programming)
+- Technique: Data layout transformations
 
-Tools: CPU topology and affinity
+## Lecturer
 
-The Roofline performance model
-
-Tools: Performance counters
-
-Technique: Vectorisation (SIMD programming)
-
-Technique: Data layout transformations
+- [Lawrence Mitchell](mailto:lawrence@wence.uk)

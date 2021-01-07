@@ -1,5 +1,5 @@
 ---
-title: "Exercise 3: memory bandwidth"
+title: "Memory bandwidth"
 weight: 3
 ---
 
@@ -21,24 +21,24 @@ remember how to do this.
 
 ## Compute node topology
 
-{{% task "1" %}}
+{{< exercise >}}
 The first thing we need to do is figure out what the _topology_ of the
 node we're running on is. We can do that by running `likwid-topology
 -g`. We can use this to guide appropriate choices of vectors.
-{{% /task %}}
+{{< /exercise >}}
 
-{{% question %}}
+{{< question >}}
 How many sockets are there on a node on Hamilton?
-{{% /question %}}
+{{< /question >}}
 
-{{% question %}}
+{{< question >}}
 On each socket, how many cores are there?
-{{% /question %}}
+{{< /question >}}
 
-{{% question %}}
+{{< question >}}
 How large are the caches (L1, L2, L3) on each socket? Which levels of
 the cache are private, and which are shared?
-{{% /question %}}
+{{< /question >}}
 
 Having answered these questions, you should be able to pick
 appropriate vector sizes to check the parallel memory
@@ -132,7 +132,7 @@ each socket, and to use 12 cores on each socket.
 
 ## Measuring the memory bandwidth
 
-{{% task "2" %}}
+{{< exercise >}}
 You should now produce plots of memory bandwidth as a function of the
 number of cores for data at different levels in the memory hierarchy.
 
@@ -147,12 +147,12 @@ For the main memory, pick a vector size of around 1GB/socket.
 You should produce plots of the memory bandwidth as a function of the
 number of cores for each of these different vector sizes.
 
-{{% /task %}}
+{{< /exercise >}}
 
-{{% question %}}
+{{< question >}}
 Do you observe any difference in the _scalability_ of the memory
 bandwidth when you change the size of the vectors?
 
 Can you explain what you see based on the notion of shared and
 scalable resources?
-{{% /question %}}
+{{< /question >}}

@@ -1,5 +1,5 @@
 ---
-title: "Exercise 5: models and measurements"
+title: "Models and measurements"
 weight: 5
 ---
 
@@ -12,7 +12,8 @@ accessed via
 
 ## Background
 
-I provide [an implementation]({{< code-ref 5 "stream.c" >}}) in C
+I provide [an implementation]({{< code-ref 5 "stream.c" >}}) (in
+`code/exeercise05/stream.c`) written in C
 of the [STREAM TRIAD](https://www.cs.virginia.edu/stream/) benchmark.
 It provides scalar, SSE, and AVX implementations of the loop
 
@@ -103,9 +104,9 @@ Region Scalar, Group 1: Custom
 This measurement at least, aligns with what we expected, since we see
 about 300000 loads.
 
-{{% question %}}
+{{< question >}}
 1. How does the number of loads change if you use the SSE, AVX, or FMA
    versions of the code?
 2. How many stores do you measure?
 3. Can you find a way of measuring the stores and loads in one go?
-{{% /question %}}
+{{< /question >}}
