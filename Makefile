@@ -10,7 +10,7 @@ pypdf = $(patsubst %.py,%.pdf,$(pyfigures))
 
 .PHONY: html pypng 
 
-html: allcode pysvg drawiosvg
+html: allcode pysvg
 	(cd site; hugo --minify --cleanDestinationDir)
 
 allslides: allfigures
