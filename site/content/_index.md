@@ -48,6 +48,11 @@ sessions.
 Exercises look like this.
 {{< /exercise >}}
 
+## Annotated slides
+
+Slides as annotated during the live lectures
+
+- [Session 1](lecture-slides/01.pdf)
 ## Syllabus
 
 - Fundamentals of performance engineering
