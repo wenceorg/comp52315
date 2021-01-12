@@ -7,8 +7,8 @@ weight: 1
 # COMP52315: Performance Engineering
 
 This is the course webpage for the Performance Engineering part of
-[COMP52315]({{< modulepage >}}). It collects the exercises, syllabus, and notes. The source
-repository is [hosted on GitHub]({{< repo >}}).
+[COMP52315]({{< modulepage >}}). It collects the exercises, syllabus,
+and notes. The source repository is [hosted on GitHub]({{< repo >}}).
 
 The primary goal of the course is to equip you with tools and
 techniques to answer the question
@@ -53,6 +53,8 @@ Exercises look like this.
 Slides as annotated during the live lectures
 
 - [Session 1](lecture-slides/01.pdf)
+- [Session 2](lecture-slides/02.pdf)
+
 ## Syllabus
 
 - Fundamentals of performance engineering

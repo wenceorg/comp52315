@@ -405,7 +405,7 @@ result ← r1.0 + r1.1 + ... + r1.7
 
 The accumulation parameter `c` is held in a register. At each
 iteration of the vectorised loop, we load eight elements of `a` into a
-recond register. Since each `float` value takes 4 bytes, this means
+second register. Since each `float` value takes 4 bytes, this means
 that each iteration of the loop requires 32 bytes of data.
 
 {{< hint info >}}
