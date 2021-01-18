@@ -197,3 +197,24 @@ Having constructed our model, let's actually [do this]({{< ref
 on.
 
 {{< /exercise >}}
+
+## Profiling
+
+Suppose that you have a code and run it, but don't really know
+anything else about it. You want to know which bits take time. What to
+do?
+
+We use _profiling_ of some kind to determine hotspots (regions of the
+code where the bulk of the time is spent). Our optimisation cycle
+should focus on these first, because the largest gains are available
+here (recall
+[Amdahl](https://teaching.wence.uk/phys52015/notes/theory/scaling-laws/#amdahl)
+from last term). The other parts of the code may become important
+after doing some optimisation, but we should start with the largest
+chunk.
+
+There are broadly-speaking two variants of profiling, _sampling_-based
+and _instrumentation_-based.
+
+
+## "Top-down" methodology
