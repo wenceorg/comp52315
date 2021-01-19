@@ -54,6 +54,8 @@ Slides as annotated during the live lectures
 
 - [Session 1](lecture-slides/01.pdf)
 - [Session 2](lecture-slides/02.pdf)
+- [Session 3](lecture-slides/03.pdf), and the [roofline
+  paper](lecture-slides/williams2009-roofline.pdf)
 
 ## Syllabus
 
