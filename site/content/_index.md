@@ -56,6 +56,12 @@ Slides as annotated during the live lectures
 - [Session 2](lecture-slides/02.pdf)
 - [Session 3](lecture-slides/03.pdf), and the [roofline
   paper](lecture-slides/williams2009-roofline.pdf)
+- [Session 4](lecture-slides/04.pdf)
+  I got a bit confused towards the end in the exercises determining
+  why likwid was reporting load counts different from those we were
+  expecting. We worked this out (thanks Finlay) by the next session:
+  the compiler was inlining some code and producing some extra moves.
+- [Session 5](lecture-slides/05.pdf)
 
 ## Syllabus
 
