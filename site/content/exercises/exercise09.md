@@ -106,3 +106,50 @@ unroll factor of the `j` loop.
 What's the maximum estimated speedup you can achieve?
 
 {{< /question >}}
+
+## Putting it together
+
+The subdirectory `code/exercise09/blis-gemm/` contains a complete
+implementation of this scheme (I don't have optimal parameters
+though). You can edit the `parameters.h` file to set the blocking
+parameters `MR` and `NR`, you'll also need to edit `micro-kernel.c` to
+annotate the loops with the pragmas you found to be useful on the
+compiler explorer.
+
+{{< exercise >}}
+
+Set all blocking five blocking parameters in `parameters.h` to 1, and
+compile the code. Keep track of the values for `MC`, `KC`, and `NC`
+since we'll use them later.
+
+Run for a range of matrix sizes between 100 and 2000. What performance
+do you observe?
+
+{{< exercise >}}
+
+{{< exercise >}}
+
+Now restore the values for `MC`, `KC`, and `NC`, and use your good
+parameters for `MR` and `NR`. Recompile and rerun the benchmarking.
+What performance do you observe now?
+
+{{< /exercise >}}
+
+{{< exercise >}}
+In addition to having good parameters, now add the pragmas to the
+micro kernel in `micro-kernel.c` and rerun the same experiments again.
+What performance do you observe now?
+
+Last time I tried this, I found that I needed to stop the
+`micro_kernel` being inlined by the Intel compiler for really good
+performance, so change the signature to be
+
+```c
+__attribute__((noinline))
+static void micro_kernel(...)
+```
+
+Rerun again, do you observe any further differences?
+
+How close to peak performance does the code get?
+{{< /exercise >}}
