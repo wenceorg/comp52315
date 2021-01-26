@@ -1,5 +1,5 @@
 ---
-title: "Compiler feedback"
+title: "Compiler feedback and the BLIS DGEMM"
 weight: 9
 ---
 
@@ -125,7 +125,7 @@ since we'll use them later.
 Run for a range of matrix sizes between 100 and 2000. What performance
 do you observe?
 
-{{< exercise >}}
+{{< /exercise >}}
 
 {{< exercise >}}
 
