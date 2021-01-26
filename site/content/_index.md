@@ -62,6 +62,18 @@ Slides as annotated during the live lectures
   expecting. We worked this out (thanks Finlay) by the next session:
   the compiler was inlining some code and producing some extra moves.
 - [Session 5](lecture-slides/05.pdf)
+- [Session 6](lecture-slides/06.pdf)
+  I went over the end of the cache blocking for matrix-matrix
+  multiplication again, and then we looked briefly at the performance
+  we obtained on Hamilton. We then looked at how we can convince our
+  compiler to generate the code we know is right. As mentioned, in my
+  experience, of Intel, GCC, and Clang, the Intel compiler is the best
+  in terms of optimisation reports. Flags for Intel are in the slides.
+  For GCC, we can get some reports with `-fopt-info` (see [this
+  page](https://gcc.gnu.org/onlinedocs/gcc/Developer-Options.html) and
+  search for `-fopt-info`). For Clang, we can get some reports with
+  `-Rpass=vec` and `-Rpass-missed=vec` (see [this
+  page](https://clang.llvm.org/docs/UsersManual.html#options-to-emit-optimization-reports)).
 
 ## Syllabus
 
