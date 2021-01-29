@@ -216,5 +216,175 @@ chunk.
 There are broadly-speaking two variants of profiling, _sampling_-based
 and _instrumentation_-based.
 
+### Sample-based profiling
 
-## "Top-down" methodology
+The basic idea here is that I run my code and periodically poke it to
+ask "what part of the code is currently executing?". Depending on how
+exactly you compiled code (did it include debug symbols: `-g` in the
+compile flags or not?), you might only get information about which
+lines of assembly are taking all the time, or you might also see a
+call graph (with function names). Generally speaking, I therefore
+recommend compiling with debug symbols.
+
+{{< hint info >}}
+
+You should make sure that optimisation flags come textually after
+debug symbols in your compiler flags
+
+```
+icc -g -OPTIMISATION_FLAGS_HERE ...
+```
+
+{{< /hint >}}
+
+Sample-based profiling records the state it observes the code in every
+time it it prods it. It then builds a statistical model of the code
+execution. That is, it estimates the probability distribution of
+observing the code in a routine $A$ over its lifetime. The total
+estimated time spent in each routine is then the runtime of the
+program multiplied by the probability that the code is in routine $A$.
+
+{{< manfig
+    src="samplingprofile.svg"
+    width="70%"
+    caption="A sampling profiler interrupts the program periodically to check which function it is in." >}}
+
+Sample-based profiling is very low overhead, and typically
+non-intrusive. However, we do not observe the complete behaviour. It
+is also not very suitable to short-running applications (although do
+we care about their performance?). We might get call-graph
+information, or an approximation thereto (that is, which function is
+called from which).
+
+In terms of tools, the [Intel
+VTune](https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/vtune-profiler.html)
+suite (available on Hamilton) has a sample-based profiling mode.
+On most Linux systems, the [perf](http://perf.wiki.kernel.org)
+kernel-level profiler is a available (unfortunately not on Hamilton).
+There is a large infrastructure of tools around it, I like the
+[pmu-tools](https://github.com/andikleen/pmu-tools/) developed by Andi
+Kleen.
+
+### Instrumentation-based profiling
+
+This is often the next step after sample-based profiling has allowed
+you to narrow down to a particular region of the code. Reasons for
+doing this are so that we can take more detailed measurements, or
+avoid "irrelevant" measurements from other parts of the code polluting
+our profile.
+
+The high-level picture of how this works is that we annotate the
+source code (either manually, or automatically with some tool) in the
+places we think are "interesting".
+
+{{< manfig
+    src="tracingprofile.svg"
+    width="70%"
+    caption="Instrumentation-based profiles measure events that have been annotated as 'interesting'" >}}
+
+For example, when using the likwid tool, we often want to know
+performance-counter information at a loop level (rather than whole
+program). The likwid approach to this is to have a ["marker
+API"](https://github.com/RRZE-HPC/likwid/wiki/TutorialMarkerC), we
+annotate the parts of the code we're interested in with open and close
+tags. All of the counts within the tags are agglomerated into the same
+region
+
+```c
+#include <likwid.h>
+...
+void some_expensive_function(...)
+{
+  LIKWID_MARKER_START("Loop1");
+  first_loops;
+  LIKWID_MARKER_END("Loop1");
+  something_unimportant;
+  LIKWID_MARKER_START("Loop2");
+  second_loops;
+  LIKWID_MARKER_END("Loop2");
+```
+
+Reaching to likwid is something we do if we're already reasonably sure
+of where we want to look. For a universally-available approach to
+instrumentation based profiling (at least for C/C++ programs), we can
+always use [gprof](https://sourceware.org/binutils/docs/gprof/). The
+workflow is reasonably straightforward
+
+{{< hint info >}}
+
+#### `gprof` workflow
+
+1. Compile and link code with debug symbols (`-g`) and profiling
+   information (`-pg`)
+2. Run the code, which produces a file `gmon.out`
+3. Postprocess data with the `gprof` command
+4. Look at results
+{{< /hint >}}
+
+`gprof` can provide both a flat profile (which function takes the most
+time?) and a call-graph profile (where were expensive functions called
+from?). The latter is more useful in complex code, since it might be
+the case that calls to a function are cheap from one location but
+expensive from another.
+
+For example, imagine a code that calls
+[`dgemm`](http://www.netlib.org/lapack/explore-html/d1/d54/group__double__blas__level3_gaeda3cbd99c8fb834a60a6412878226e1.html)
+in two locations, once with tiny matrices, the other time with large
+ones.
+
+```c
+void expensive_call(...)
+{
+  ...;
+  dgemm(REALLY_BIG_MATRICES);
+}
+
+void cheap_call(...)
+{
+  ...;
+  dgemm(SMALL_MATRICES);
+}
+
+...
+int main(...)
+{
+  expensive_call(...);
+  cheap_call(...);
+}
+```
+
+We want to know to focus our efforts on the calls that are made to
+`dgemm` with large matrices. A flat profile hides this information.
+
+{{< exercise >}}
+
+For specific usage instructions, the [gprof
+manual](https://sourceware.org/binutils/docs/gprof/) is a good guide. 
+
+[Exercise 6]({{< ref "exercise06.md" >}}) has a walkthrough using
+gprof to find the right functions to look at for more detailed
+profiling in a small molecular dynamics application.
+
+{{< /exercise >}}
+
+### Where next
+
+Having found the right parts of the code to look at, we can inspect
+the code to understand what it is doing. It is often worthwhile at
+this point running measurements for a range of input parameters, to
+see if we can observe the algorithmic scaling. For example, suppose
+there is some parameter that controls the resolution in the model
+(perhaps the total number of degrees of freedom). It is interesting to
+see how the profile changes when we vary this parameter. We might
+observe that the same part of the code is expensive in all cases, or
+maybe the performance bottleneck will move.
+
+Let us suppose, though, that we have target parameters in mind. Having
+pinned down where to look, we need to understand the algorithm and
+should attempt to construct a model of how fast we think the code
+could run. We have seen a few ways how to do this, the roofline model
+provides a very coarse estimate. If we want more detail, we probably
+need to construct problem-specific models: hopefully the numerical
+method will be well-studied. Dense matrix-matrix multiplication is a
+good example, and we saw some analysis in [lecture 5]({{< static-ref
+"lecture-slides/05.pdf" >}}).

@@ -427,6 +427,8 @@ iteration of the outer loop and keep all of `a` in cache for the
 duration. However, if the cache is not big enough, we might not
 achieve this.
 
+### Cache models
+
 In our analysis, we might not have complete knowledge of the cache
 sizes, so we can use some simple models. The two extremes are a
 _perfect cache_ and a _pessimal cache_.
