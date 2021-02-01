@@ -242,7 +242,8 @@ the above questions.
 ## Mark scheme and submission
 
 You should submit, via DUO, a **PDF** of your report (max 5 pages,
-including figures and tables).
+including figures and tables), named by your Z-code, (that is,
+something like Z0123456.pdf).
 
 
 | Artifact | Descriptor                                  | Marks |
