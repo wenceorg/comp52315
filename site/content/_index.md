@@ -74,6 +74,18 @@ Slides as annotated during the live lectures
   search for `-fopt-info`). For Clang, we can get some reports with
   `-Rpass=vec` and `-Rpass-missed=vec` (see [this
   page](https://clang.llvm.org/docs/UsersManual.html#options-to-emit-optimization-reports)).
+- [Session 7](lecture-slides/07.pdf), I also annotated one page from
+  the [BLIS paper](lecture-slides/vanzee2015-blis.pdf).
+
+  The two articles I took examples from for the dimension-lifted
+  transposition approach are [Henretty et al. (2011), _Data Layout
+  Transformation for Stencil Computations on Short-Vector SIMD
+  Architectures_](https://web.cs.ucla.edu/~pouchet/doc/cc-article.11.pdf),
+  and [Boyle et al. (2015), _Grid: A next generation data parallel C++
+  QCD library_](https://arxiv.org/pdf/1512.03487.pdf). One example of
+  the same approach applied to unstructured problems is shown in [Sun
+  et al. (2020), _A study of vectorization for matrix-free finite
+  element methods_](https://arxiv.org/pdf/1903.08243.pdf).
 
 ## Syllabus
 
