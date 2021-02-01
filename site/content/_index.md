@@ -50,19 +50,24 @@ Exercises look like this.
 
 ## Annotated slides
 
-Slides as annotated during the live lectures
+Slides as annotated during the live lectures. Recordings of the live
+sessions are available if you're appropriately logged in. If you think
+you should have access but don't, please [get in
+touch](mailto:lawrence.mitchell@durham.ac.uk).
 
-- [Session 1](lecture-slides/01.pdf)
-- [Session 2](lecture-slides/02.pdf)
+- [Session 1](lecture-slides/01.pdf), [video](https://web.microsoftstream.com/video/47a15875-eddc-48b3-ac17-6b68ee46a8d6).
+- [Session 2](lecture-slides/02.pdf), [video](https://web.microsoftstream.com/video/ecf53b07-636e-4ffa-abe8-fe697230d56c).
 - [Session 3](lecture-slides/03.pdf), and the [roofline
-  paper](lecture-slides/williams2009-roofline.pdf)
-- [Session 4](lecture-slides/04.pdf)
+  paper](lecture-slides/williams2009-roofline.pdf),
+  [video part I](https://web.microsoftstream.com/video/ba7827a0-3146-4396-afde-b51082729f8c)
+  and [part II](https://web.microsoftstream.com/video/7c448687-e366-4492-8434-d0e98b5f556d).
+- [Session 4](lecture-slides/04.pdf), [video](https://web.microsoftstream.com/video/7c448687-e366-4492-8434-d0e98b5f556d).
   I got a bit confused towards the end in the exercises determining
   why likwid was reporting load counts different from those we were
   expecting. We worked this out (thanks Finlay) by the next session:
   the compiler was inlining some code and producing some extra moves.
-- [Session 5](lecture-slides/05.pdf)
-- [Session 6](lecture-slides/06.pdf)
+- [Session 5](lecture-slides/05.pdf), [video](https://web.microsoftstream.com/video/86b11649-7c68-4739-a3e9-4727ee9d0621).
+- [Session 6](lecture-slides/06.pdf), [video](https://web.microsoftstream.com/video/61b6b896-af83-4a6f-b7b0-0d7f968cf789).
   I went over the end of the cache blocking for matrix-matrix
   multiplication again, and then we looked briefly at the performance
   we obtained on Hamilton. We then looked at how we can convince our
@@ -75,7 +80,7 @@ Slides as annotated during the live lectures
   `-Rpass=vec` and `-Rpass-missed=vec` (see [this
   page](https://clang.llvm.org/docs/UsersManual.html#options-to-emit-optimization-reports)).
 - [Session 7](lecture-slides/07.pdf), I also annotated one page from
-  the [BLIS paper](lecture-slides/vanzee2015-blis.pdf).
+  the [BLIS paper](lecture-slides/vanzee2015-blis.pdf), [video](https://web.microsoftstream.com/video/994cf8c0-6403-48a0-85fd-b0d6cec9bc62).
 
   The two articles I took examples from for the dimension-lifted
   transposition approach are [Henretty et al. (2011), _Data Layout
