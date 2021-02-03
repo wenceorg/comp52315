@@ -91,6 +91,26 @@ touch](mailto:lawrence.mitchell@durham.ac.uk).
   the same approach applied to unstructured problems is shown in [Sun
   et al. (2020), _A study of vectorization for matrix-free finite
   element methods_](https://arxiv.org/pdf/1903.08243.pdf).
+- [Session 8](lecture-slides/08.pdf),
+  [video](https://web.microsoftstream.com/video/1bc1a757-9a7a-4b08-b88b-5ef523819a0c)
+
+  We did a walkthrough of doing a roofline analysis. I got a bit
+  confused with the data in the plots from the slides, so we did it
+  live with the BLIS GEMM implementation (see [exercise 9]({{< ref
+  "exercise09.md" >}})). Those are the drawn-in points in the
+  annotated slides.
+
+  I then looked at application of some of the ideas in the course to
+  the [Firedrake](https://www.firedrakeproject.org/) finite element
+  system. We did the dimension-lifted transposition approach on
+  unstructured data (rather than the structured grids that we looked
+  at last time).
+
+  Finally we tried to build the coursework code to check that it will
+  work when you do it. Only to find it didn't, so I updated the PETSc
+  install on Hamilton and rebuilt things, so I hope that the same
+  approach should work for you. Please get in touch if it doesn't (or
+  there are things that you don't understand).
 
 ## Syllabus
 
