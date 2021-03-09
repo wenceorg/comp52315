@@ -51,4 +51,4 @@ figures/%.pdf: figures/%.py
 	python $< $@
 
 allcode:
-	rsync --delete -rupm code/ site/static/code/ --filter '+ */' --filter '+ *.c' --filter '- *'
+	rsync --delete -rupm code/ site/static/code/ --filter '+ */' --filter '+ *.c' --filter '+ *.h' --filter '- *'
