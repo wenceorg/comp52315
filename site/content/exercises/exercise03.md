@@ -1,6 +1,7 @@
 ---
 title: "Memory bandwidth"
 weight: 3
+katex: true
 ---
 
 # Measuring multi-core memory bandwidth
@@ -67,9 +68,9 @@ S0:size:1` which means
 
 To change the number of cores, we replace `1` by our choice
 (say `2`). The vector size is the global vector size, so if
-we run with a vector size \\(S\\) on
-\\(N\\) cores, then each core gets
-\\(\frac{S}{N}\\) elements.
+we run with a vector size $S$ on
+$N$ cores, then each core gets
+$\frac{S}{N}$ elements.
 
 For example, to run on one socket with 4 cores, such that each core
 handles 4KB of data, we run `likwid-bench -t clload -w
