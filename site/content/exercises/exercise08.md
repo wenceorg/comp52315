@@ -12,7 +12,7 @@ throughput of matrix transpose operations in [exercise 7]({{< ref
 loop-tiling scheme presented in lectures for matrix-matrix
 multiplication. I provide an implementation of [matrix-matrix
 multiplication]({{< code-ref 8 "gemm.c" >}}) in
-`code/exercise08/gemn,c` that provides three
+`code/exercise08/gemm.c` that provides three
 different variants. A naive triple loop, a tiled version of the triple
 loop, and a tiled version that manually packs local buffers.
 
