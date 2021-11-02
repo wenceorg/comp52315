@@ -123,4 +123,4 @@ touch](mailto:lawrence.mitchell@durham.ac.uk).
 
 ## Lecturer
 
-- [Lawrence Mitchell](mailto:lawrence@wence.uk)
+- [Lawrence Mitchell](mailto:lawrence.mitchell@durham.ac.uk)
