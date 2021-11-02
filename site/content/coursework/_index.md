@@ -6,13 +6,6 @@ katex: true
 
 # Fast finite elements
 
-{{< hint warning >}}
-
-You should submit your work for this coursework via DUO. The
-submission deadline is 2021-02-15 at 14:00UTC.
-
-{{< /hint >}}
-
 ## Introduction
 
 The finite element method is a popular and flexible method for the
@@ -34,9 +27,14 @@ Gradient](https://en.wikipedia.org/wiki/Conjugate_gradient_method)
 method to compute $u = A^{-1} f$. This only needs matrix-vector
 products and the inverse of the diagonal of $A$.
 
-This problem is the same as the first ["bake-off"
-problem](https://ceed.exascaleproject.org/bps/) proposed by the [CEED
+This problem is the same as the first two ["bake-off"
+problems](https://ceed.exascaleproject.org/bps/) proposed by the [CEED
 project](https://ceed.exascaleproject.org).
+
+A wide-scale study of these problems in a number of finite element
+codes is presented in [this paper](https://arxiv.org/abs/2004.06722).
+You may find this useful to set the scene and get some ideas as to
+what kinds of performance to look for.
 
 We will use their code to perform the benchmarking and the performance
 study. You can obtain the code from [their github
@@ -47,7 +45,7 @@ compile it following their instructions and set the `PETSC_DIR` and
 
 {{< hint info >}}
 
-On Hamilton, I provide a useable version of PETSc.
+On Hamilton, I provide a usable version of PETSc.
 
 To use it, you'll need to use the following modules
 ```
@@ -90,7 +88,7 @@ $ make bpsraw
 
 We can now run the benchmark, it uses commandline options to control
 which problem to run, along with the approximation degree and size of
-the problem. We're interested in the problem `bp1`.
+the problem. We're interested in the `bp1` and `bp2` problems.
 
 ```
 $ ./bpsraw -problem bp1
@@ -229,6 +227,8 @@ You should study:
    this from 1000 to 500000). Which backend provides the best
    performance? What about the worst? Does it depend on the degree or
    problem size?
+1. Do your findings/conclusions change when you move from `bp1` to
+   `bp2`?
 1. For the best and worst backends, how does the performance scale in
    parallel? You can restrict yourself to a single Hamilton node.
 1. How close to the hardware performance limits you think the code is.
@@ -239,11 +239,11 @@ It should describe the experiments you performed, and present (in an
 appropriate manner) the data you collected along with the answers to
 the above questions.
 
+
 ## Mark scheme and submission
 
-You should submit, via DUO, a **PDF** of your report (max 5 pages,
-including figures and tables), named by your Z-code, (that is,
-something like Z0123456.pdf).
+You should submit, via ULTRA, a **PDF** of your report (max 5 pages,
+including figures and tables), named by your CIS username.
 
 
 | Artifact | Descriptor                                  | Marks |
@@ -252,9 +252,7 @@ something like Z0123456.pdf).
 |   Report | Appropriate use of performance models       | 20    |
 |   Report | Analysis and presentation of data, writing  | 60    |
 
-The report will be marked with reference to the descriptors for
-written work (non-dissertation) found on
-[DUO](https://duo.dur.ac.uk/webapps/blackboard/content/listContent.jsp?course_id=_91410_1&content_id=_5831035_1),
-see _MSc in Scientific Computing and Data Analysis Programme →
-Assessments and Procedures → Marking criteria for written work
-(non-dissertation)_.
+The reports will be marked with reference to the [descriptors for
+written
+work](https://durhamuniversity.sharepoint.com/teams/MScScientificComputingandDataAnalysis/SitePages/Written-Work-Descriptors-(Non-Dissertation).aspx)
+on the MISCADA sharepoint site.
