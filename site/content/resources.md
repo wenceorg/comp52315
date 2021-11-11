@@ -18,8 +18,10 @@ weight: 5
   sorting small arrays by vectorisation (among other things).
 - [Denis Bakhvalov](https://easyperf.net) writes a blog on performance
   optimisation, with a focus on the "top-down" methodology. He also
-  has a free ebook on performance analysis and tuning.
-- [Andi Kleen](https://halobates.de) develops the
+  has a free ebook on performance analysis and tuning, and a [series of
+  exercises](https://github.com/dendibakh/perf-ninja) exploring
+  individual performance analysis and optimisations.
+- Andi Kleen develops the
   [`pmu-tools`](https://github.com/andikleen/pmu-tools) project, whose
   `toplev` command is useful. The
   [manual](https://github.com/andikleen/pmu-tools/wiki/toplev-manual)
