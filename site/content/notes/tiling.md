@@ -58,7 +58,7 @@ bandwidth. Conversely, matrix-matrix multiplication does
 $\mathcal{O}(N^3)$ floating point operations on $\mathcal{O}(N^2)$
 data, for a arithmetic intensity of $\mathcal{O}(N)$ in the [perfect
 cache
-model](http://localhost:1313/comp52315/notes/roofline/#cache-models).
+model]({{< ref "roofline.md#cache-models" >}}).
 
 {{< hint info >}}
 This is actually overly optimistic of what we can achieve, but
