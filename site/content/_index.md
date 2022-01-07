@@ -75,6 +75,10 @@ Exercises look like this.
 - Technique: Vectorisation (SIMD programming)
 - Technique: Data layout transformations
 
+[Slides]({{< ref "slides.md" >}}) will appear before the sessions, and
+the annotated versions will appear after the sessions. The long form
+notes run over much of the same ground, but with more words.
+
 ## Lecturer
 
 - [Lawrence Mitchell](mailto:lawrence.mitchell@durham.ac.uk)
