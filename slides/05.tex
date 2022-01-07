@@ -1,0 +1,704 @@
+% -*- TeX-engine: luatex -*-
+\documentclass[presentation,aspectratio=43,10pt]{beamer}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.15}
+\usepackage{template}
+\input{setup-lawrence}
+\renewcommand{\sessionnumber}{5}
+\renewcommand{\sessiontitle}{Cache blocking/tiling}
+\usepackage{tikz}
+\usetikzlibrary{matrix,fit,positioning,calc}
+\usepackage{pgfplotstable}
+\usepackage{booktabs}
+\usetikzlibrary{pgfplots.groupplots}
+\date{}
+
+\begin{document}
+\begin{frame}
+  \maketitle
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{An exemplar problem}
+  \begin{block}{Matrix transpose}
+    \begin{equation*}
+      B_{ij} \gets A_{ji} \quad A, B \in \mathbb{R}^{n\times n}
+    \end{equation*}
+\begin{minted}{c}
+  double *a, *b;
+  ...
+  for (int i = 0; i < N; i++)
+    for (int j = 0; j < N; j++)
+      b[i*N + j] = a[j*N + i];
+\end{minted}
+  \end{block}
+
+  So far, we've talked about how to measure performance, and perhaps
+  determine that it is bad.
+
+  $\Rightarrow$ what can we do about it?
+\end{frame}
+
+\begin{frame}
+  \frametitle{Matrix transpose: simple performance model}
+  \begin{exampleblock}{Set up our expectation}
+    \begin{itemize}
+    \item $N^2$ loads, $N^2$ stores, no compute
+    \item[$\Rightarrow$] all we're doing is copying data
+    \item Hence we might expect to see performance close to that of the
+      streaming memory bandwidth, independent of matrix size.
+    \end{itemize}
+  \end{exampleblock}
+  \pause
+  \begin{center}
+    \begin{tabular}{cc}
+      \toprule
+      Matrix size & BW [GByte/s]\\
+      \midrule
+      $128\times 128$ & 22\\
+      $256 \times 256$ & 13\\
+      $512 \times 512$ & 13\\
+      $1024 \times 1024$ & 5\\
+      $2048 \times 2048$ & 1.6\\
+      $4096 \times 4096$ & 0.9\\
+      \bottomrule
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{What went wrong?}
+  \begin{center}
+\begin{minted}{c}
+  double *a, *b;
+  ...
+  for (int i = 0; i < N; i++)
+    for (int j = 0; j < N; j++)
+      b[i*N + j] = a[j*N + i];
+\end{minted}
+  \end{center}
+  \begin{itemize}
+  \item We have streaming access to \texttt{b}, but stride-$N$ access
+    to \texttt{a}.
+  \item If both matrices fit in cache, this is OK, and a reasonable
+    model of time is $T_{\text{cache}} = N^2(t_\text{read} +
+    t_\text{write})$.
+  \item Note that the reads of \texttt{a} load a full cache line, but use only 8 bytes
+    of it.
+  \item Better model $T_\text{mem} = N^2(8 t_\text{read} + t_\text{write})$
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{A picture}
+  \begin{columns}
+    \begin{column}{0.45\textwidth}
+      \begin{center}
+        \includegraphics[width=\textwidth]{figures/strideoneaccess}
+      \end{center}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \begin{center}
+        \includegraphics[width=\textwidth]{figures/stridenaccess}
+      \end{center}
+    \end{column}
+  \end{columns}
+\end{frame}
+\begin{frame}
+  \frametitle{Cache locality}
+  \begin{itemize}
+  \item Since we have strided access to \texttt{a}, we need to hold
+    $L N$ bytes in the cache to get any reuse, where $L$ is the cache
+    line size in. This is not possible for large matrices.
+  \item A mechanism to fix this is to \emph{reorder} the loop
+    iterations to preserve spatial locality.
+  \end{itemize}
+  \begin{block}{Idea}
+    \begin{itemize}
+    \item Break loop iteration space into blocks
+      \begin{itemize}
+      \item \emph{strip-mining}
+      \item \emph{loop reordering}
+      \end{itemize}
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Strip mining}
+  \begin{itemize}
+  \item Break a loop into blocks of consecutive elements
+    \begin{challenge}{Before}
+\begin{minted}{c}
+  for ( int i = 0; i < N; i++ )
+    a[i] = f(i);
+\end{minted}
+    \end{challenge}
+    \begin{answer}{After}
+\begin{minted}{c}
+  for ( int ii = 0; ii < N; ii += stride)
+    for ( int i = ii; i < min(N, ii + stride); i++)
+      a[i] = f(i);
+\end{minted}
+    \end{answer}
+  \item Not that useful for just a single loop, although there are
+    circumstances where one might use it
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Strip mining multiple loops}
+  \begin{itemize}
+  \item Let's do the same for both loops of the transpose:
+    \begin{challenge}{Before}
+\begin{minted}{c}
+  for (int i = 0; i < N; i++)
+    for (int j = 0; j < N; j++)
+      a[i*N + j] = a[j*N + i];
+\end{minted}
+    \end{challenge}
+
+    \begin{answer}{After}
+\begin{minted}{c}
+  for (int ii = 0; ii < N; ii += stridei)
+    for (int i = ii; i < min(N, ii+stridei); i++)
+      for (int jj = 0; jj < N; jj += stridej)
+        for (int j = jj; j < min(N, jj+stridej); j++)
+          b[i*N + j] = a[j*N + i];
+\end{minted}
+    \end{answer}
+  \item Haven't yet made any change to the performance
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Reorder loops}
+  \begin{exampleblock}{After permuting \texttt{i} and \texttt{jj} loops}
+\begin{minted}{c}
+  for (int ii = 0; ii < N; ii += stridei)
+    for (int jj = 0; jj < N; jj += stridej)
+      for (int i = ii; i < min(N, ii+stridei); i++)
+        for (int j = jj; j < min(N, jj+stridej); j++)
+          b[i*N + j] = a[j*N + i];
+\end{minted}
+  \end{exampleblock}
+  \begin{itemize}
+  \item Two free parameters \texttt{stridei} and \texttt{stridej}
+  \item Need to choose these appropriately to levels in the cache
+    hierarchy
+  \item Ideally block for L1, L2, L3, etc\dots
+  \item The extra logic adds some overhead
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Why is it ``tiling''?}
+  \begin{center}
+    Iteration over $B$.
+  \end{center}
+  \begin{columns}
+    \begin{column}{0.45\pagewidth}
+      \begin{tikzpicture} [nodes in empty cells,
+        nodes={minimum width=0.7cm, minimum height=0.25cm},
+        row sep=-\pgflinewidth, column sep=-\pgflinewidth]
+        \matrix(matrix)[matrix of nodes, nodes={draw=gray!50, thin}]
+        {
+          0  & 1 & 2 & 3 & 4 & 5 & 6 & 7 \\
+          8 & 9 & 10 & 11 & 12 & 13 & 14 & 15\\
+          16 & 17 & 18 & 19 & 20 & 21 & 22 & 23\\
+          24 & 25 & 26 & 27 & 28 & 29 & 30 & 31\\
+          32 & 33 & 34 & 35 & 36 & 37 & 38 & 39\\
+          40 & 41 & 42 & 43 & 44 & 45 & 46 & 47\\
+          48 & 49 & 50 & 51 & 52 & 53 & 54 & 55\\
+          56 & 57 & 58 & 59 & 60 & 61 & 62 & 63\\
+        };
+        \foreach \r in {1, 2, 3, 4, 5, 6, 7, 8} {
+          \draw[line width=1, black!50] (matrix-\r-1.center) -- (matrix-\r-8.center);
+        };
+        \foreach \i\j in {1/2, 2/3, 3/4, 4/5, 5/6, 6/7, 7/8} {
+          \draw[line width=1, black!50] (matrix-\i-8.center) -- (matrix-\j-1.center);
+        };
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{0.45\pagewidth}
+      \begin{tikzpicture} [nodes in empty cells,
+        nodes={minimum width=0.7cm, minimum height=0.25cm},
+        row sep=-\pgflinewidth, column sep=-\pgflinewidth]
+        \matrix(matrix)[matrix of nodes, nodes={draw=gray!50, thin}]
+        {
+          0  & 1 & 2 & 3 & 4 & 5 & 6 & 7 \\
+          8 & 9 & 10 & 11 & 12 & 13 & 14 & 15\\
+          16 & 17 & 18 & 19 & 20 & 21 & 22 & 23\\
+          24 & 25 & 26 & 27 & 28 & 29 & 30 & 31\\
+          32 & 33 & 34 & 35 & 36 & 37 & 38 & 39\\
+          40 & 41 & 42 & 43 & 44 & 45 & 46 & 47\\
+          48 & 49 & 50 & 51 & 52 & 53 & 54 & 55\\
+          56 & 57 & 58 & 59 & 60 & 61 & 62 & 63\\
+        };
+        \foreach \r in {1, 2, 3, 4, 5, 6, 7, 8} {
+          \draw[-, line width=1, black!50] (matrix-\r-1.center) -- (matrix-\r-4.center);
+          \draw[-, line width=1, black!50] (matrix-\r-5.center) -- (matrix-\r-8.center);
+        };
+        \foreach \i\j in {1/2, 2/3, 3/4, 5/6, 6/7, 7/8} {
+          \draw[-, line width=1, black!50] (matrix-\i-4.center) -- (matrix-\j-1.center);
+          \draw[-, line width=1, black!50] (matrix-\i-8.center) -- (matrix-\j-5.center);
+        };
+        \draw[-, line width=1, black] (matrix-4-4.center) -- (matrix-1-5.center);
+        \draw[-, line width=1, black] (matrix-4-8.center) -- (matrix-5-1.center);
+        \draw[-, line width=1, black] (matrix-8-4.center) -- (matrix-5-5.center);
+      \end{tikzpicture}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Why is it ``tiling''?}
+  \begin{center}
+    Iteration over $A$.
+  \end{center}
+  \begin{columns}
+    \begin{column}{0.45\pagewidth}
+      \begin{tikzpicture} [nodes in empty cells,
+        nodes={minimum width=0.7cm, minimum height=0.25cm},
+        row sep=-\pgflinewidth, column sep=-\pgflinewidth]
+        \matrix(matrix)[matrix of nodes, nodes={draw=gray!50, thin}]
+        {
+          0  & 1 & 2 & 3 & 4 & 5 & 6 & 7 \\
+          8 & 9 & 10 & 11 & 12 & 13 & 14 & 15\\
+          16 & 17 & 18 & 19 & 20 & 21 & 22 & 23\\
+          24 & 25 & 26 & 27 & 28 & 29 & 30 & 31\\
+          32 & 33 & 34 & 35 & 36 & 37 & 38 & 39\\
+          40 & 41 & 42 & 43 & 44 & 45 & 46 & 47\\
+          48 & 49 & 50 & 51 & 52 & 53 & 54 & 55\\
+          56 & 57 & 58 & 59 & 60 & 61 & 62 & 63\\
+        };
+        \foreach \c in {1, 2, 3, 4, 5, 6, 7, 8} {
+          \draw[line width=1, black!50] (matrix-1-\c.center) -- (matrix-8-\c.center);
+        };
+        \foreach \i\j in {1/2, 2/3, 3/4, 4/5, 5/6, 6/7, 7/8} {
+          \draw[line width=1, black!50] (matrix-8-\i.center) -- (matrix-1-\j.center);
+        };
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{0.45\pagewidth}
+      \begin{tikzpicture} [nodes in empty cells,
+        nodes={minimum width=0.7cm, minimum height=0.25cm},
+        row sep=-\pgflinewidth, column sep=-\pgflinewidth]
+        \matrix(matrix)[matrix of nodes, nodes={draw=gray!50, thin}]
+        {
+          0  & 1 & 2 & 3 & 4 & 5 & 6 & 7 \\
+          8 & 9 & 10 & 11 & 12 & 13 & 14 & 15\\
+          16 & 17 & 18 & 19 & 20 & 21 & 22 & 23\\
+          24 & 25 & 26 & 27 & 28 & 29 & 30 & 31\\
+          32 & 33 & 34 & 35 & 36 & 37 & 38 & 39\\
+          40 & 41 & 42 & 43 & 44 & 45 & 46 & 47\\
+          48 & 49 & 50 & 51 & 52 & 53 & 54 & 55\\
+          56 & 57 & 58 & 59 & 60 & 61 & 62 & 63\\
+        };
+        \foreach \c in {1, 2, 3, 4, 5, 6, 7, 8} {
+          \draw[-, line width=1, black!50] (matrix-1-\c.center) -- (matrix-4-\c.center);
+          \draw[-, line width=1, black!50] (matrix-5-\c.center) -- (matrix-8-\c.center);
+        };
+        \foreach \i\j in {1/2, 2/3, 3/4, 5/6, 6/7, 7/8} {
+          \draw[-, line width=1, black!50] (matrix-4-\i.center) -- (matrix-1-\j.center);
+          \draw[-, line width=1, black!50] (matrix-8-\i.center) -- (matrix-5-\j.center);
+        };
+        \draw[-, line width=1, black] (matrix-4-4.center) -- (matrix-5-1.center);
+        \draw[-, line width=1, black] (matrix-8-4.center) -- (matrix-1-5.center);
+        \draw[-, line width=1, black] (matrix-4-8.center) -- (matrix-5-5.center);
+      \end{tikzpicture}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Does it work?}
+  \begin{itemize}
+  \item Have a go, I provide some sample code for which you can tune
+    the blocking parameters.
+  \item[$\Rightarrow$] Exercise 7.
+  \end{itemize}
+  \begin{center}
+    \url{https://teaching.wence.uk/comp52315/exercises/exercise07/}
+  \end{center}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{A second problem}
+  \begin{block}{Matrix-Matrix multiplication}
+    \begin{equation*}
+      C_{ij} \gets C_{ij } + \sum_k A_{ik} B_{kj} \quad A, B, C \in \mathbb{R}^{n \times n}
+    \end{equation*}
+\begin{minted}[fontsize=\scriptsize]{c}
+  for (int i = 0; i < n; i++)
+    for (int j = 0; j < n; j++)
+      for (int k = 0; k < n; k++)
+        C[i*n + j] += A[i*n + k] * B[k*n + j];
+\end{minted}
+  \end{block}
+
+  Same story here (or at least it was in the 90s!).
+\end{frame}
+
+\begin{frame}
+  \frametitle{(Another) simple model for computation}
+  \begin{itemize}
+  \item Simple model of memory, two levels: ``fast'' and ``slow''
+  \item Initially all data in slow memory
+    \begin{itemize}
+    \item[$m$] number of data elements moved between fast and slow memory
+    \item[$t_m$] time per slow memory operation
+    \item[$f$] number of flops
+    \item[$t_f \ll t_m$] time per flop
+    \item[$q =: f/m$] average flops per slow memory access
+    \end{itemize}
+  \item Minimum time to solution (all data in fast memory)
+    \begin{equation*}
+      t_f f
+    \end{equation*}
+  \item Typical time
+    \begin{equation*}
+      f t_f + m t_m = f t_f \left(1 + \frac{t_m}{t_f}\frac{1}{q}\right)
+    \end{equation*}
+
+  \item $t_m / t_f$ property of hardware, $q$ property of \emph{algorithm}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Na\"ive matrix-multiply}
+  \begin{onlyenv}<1>
+\begin{minted}[fontsize=\scriptsize]{c}
+for (int i = 0; i < n; i++)
+  for (int j = 0; j < n; j++)
+    for (int k = 0; k < n; k++)
+      C[i*n + j] = C[i*n + j] + A[i*n + k] * B[k*n + j];
+\end{minted}
+    \begin{itemize}
+    \item Algorithm does $2n^3 = \mathcal{O}(n^3)$ flops and touches
+      $3\cdot 8 n^2$ bytes of memory
+    \item $q$ potentially $\mathcal{O}(n)$, arbitrarily large for large $n$.
+    \end{itemize}
+  \end{onlyenv}
+  \begin{onlyenv}<2>
+\begin{minted}[fontsize=\scriptsize, mathescape=true]{c}
+for (int i = 0; i < n; i++)
+  // Read row $i$ of $A$ into fast memory
+  for (int j = 0; j < n; j++)
+    // Read $C_{ij}$ into fast memory
+    // Read column $j$ of $B$ into fast memory
+    for (int k = 0; k < n; k++)
+      C[i*n + j] = C[i*n + j] + A[i*n + k] * B[k*n + j];
+    // Write $C_{ij}$ back to slow memory
+\end{minted}
+  \end{onlyenv}
+  \begin{onlyenv}<3>
+    \begin{block}{Number of slow memory references}
+      \vspace{-\baselineskip}
+      \begin{align*}
+        m &= n^3 \quad \text{each column of $B$ is read $n$ times}\\
+          &+ n^2 \quad \text{each row of $A$ is read $n$ once}\\
+          &+ 2n^2 \quad \text{each entry of $C$ is read once and
+            written once}\\
+          &= (n^3 + 3n^2)
+      \end{align*}
+      Hence
+      \begin{equation*}
+        \lim_{n\to \infty} q = \frac{f}{m} = \frac{2n^3}{(n^3 + 3n^2)} = 2
+      \end{equation*}
+    \end{block}
+  \end{onlyenv}
+  \begin{center}
+    \begin{tikzpicture}[nodes in empty cells,
+      inner sep=0cm,
+      nodes={minimum width=0.55cm, minimum height=0.55cm, text
+        height=0.35cm, text depth=0.15cm},
+      row sep=-\pgflinewidth, column sep=-\pgflinewidth]
+      \matrix(Cout)[draw, matrix of nodes]
+      {
+        & & & \\
+        & & & \\
+        &|[fill=red!50]| $C_{ij}$ & & \\
+        & & & \\
+      };
+      \node[right=0cm of Cout] (eq) {$=$};
+      \matrix(Cin)[right=0cm of eq, draw, matrix of nodes]
+      {
+        & & & \\
+        & & & \\
+        &|[fill=red!50]| $C_{ij}$ & & \\
+        & & & \\
+      };
+      \node[right=0cm of Cin] (plus) {$+$};
+      \matrix(Ain)[right=0cm of plus, draw, matrix of nodes,
+      row 3/.style={nodes={fill=red!50}}]
+      {
+        & & & \\
+        & & & \\
+        & $A_{i}$ & & \\
+        & & & \\
+      };
+      \node[right=0cm of Ain] (times) {$\times$};
+      \matrix(Bin)[right=0cm of times, draw, matrix of nodes,
+      column 2/.style={nodes={fill=red!50}}]
+      {
+        &  & & \\
+        &  & & \\
+        & $B_{j}$ & & \\
+        & & & \\
+      };
+    \end{tikzpicture}
+  \end{center}
+\end{frame}
+
+\begin{frame}
+  \frametitle{From model to prediction}
+  \begin{itemize}
+  \item So for a triply-nested loop structure, the \emph{best} time to
+    solution our model predicts is:
+    \begin{equation*}
+      T = t_f f \left(1 + \frac{t_m}{2 t_f}\right)
+    \end{equation*}
+  \item Recall that on modern hardware, memory \emph{latency} is
+    around 200 cycles per cache line. So let's approximate $t_m
+    \approx 200 / 8 = 25$, and say $t_f = 1$.
+    \begin{equation*}
+      T = t_f f (1 + 25/2) = 13.5 t_f f
+    \end{equation*}
+  \item Maximally 7\% peak.
+  \item This is \emph{only} an estimate.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Measurement}
+  \begin{itemize}
+  \item Single core Intel i5-8259U.
+  \item 2 4-wide FMAs per cycle $\Rightarrow$ 16 DP FLOPs/cycle.
+  \item[$\Rightarrow$] Peak is $3.6 \cdot 16 = 57.6$ GFLOPs/s, model
+    predicts $4.03$GFLOPs/s.
+  \end{itemize}
+  \begin{center}
+    \begin{tikzpicture}
+      \pgfplotstableset{create on use/flops/.style={
+          create col/expr={1e-9*\thisrow{FLOP}/\thisrow{TIME}}}};
+      \begin{axis}[height=0.7\textheight,
+        xlabel near ticks,
+        xlabel={Matrix size},
+        ylabel near ticks,
+        ylabel={GFlop/s}]
+        \addplot+ table[x=N, y=flops] {../figures/gemm-basic.dat};
+        \addlegendentry{Triple loop};
+        \addplot+ [domain=0:3072, mark=none, line width=2] {4.03};
+        \addlegendentry{Model};
+      \end{axis}
+    \end{tikzpicture}
+  \end{center}
+\end{frame}
+\begin{frame}[fragile]
+  \frametitle{How to improve reuse?}
+  \begin{itemize}
+  \item Problem is that we move rows and columns into fast memory, and
+    then evict them
+  \item Need way of keeping the loaded data in fast memory as long as
+    possible.
+  \item[$\Rightarrow$] tile iterations
+  \end{itemize}
+  \begin{onlyenv}<1>
+\begin{minted}[fontsize=\scriptsize, mathescape=true]{c}
+// Treat $A, B, C \in \left(\mathbb{R}^{b \times b}\right)^{N \times N}$
+// that is, $N \times N$ matrices where each entry is a $b \times b$ matrix.
+for (int i = 0; i < N; i++)
+  for (int j = 0; j < N; j++)
+    // Read block $C_{ij}$ into fast memory
+    for (int k = 0; k < n; k++)
+      // Read block $A_{ik}$ into fast memory
+      // Read block $B_{kj}$ into fast memory
+      // Do matrix multiply on the blocks
+      C[i*N + j] = C[i*N + j] + A[i*N + k] * B[k*N + j];
+    // Write block $C_{ij}$ back to slow memory
+\end{minted}
+  \end{onlyenv}
+  \begin{onlyenv}<2>
+\begin{minted}[fontsize=\scriptsize, mathescape=true]{c}
+// Treat $A, B, C \in \left(\mathbb{R}^{b \times b}\right)^{N \times N}$
+// that is, $N \times N$ matrices where each entry is a $b \times b$ matrix.
+for (int ii = 0; ii < N; ii++)
+  for (int jj = 0; jj < N; jj++)
+    for (int kk = 0; kk < N; kk++)
+      for (int i_ = 0; i_ < b; i_++)
+        for (int j_ = 0; j_ < b; j_++)
+          for (int k_ = 0; k_ < b; k_++) {
+             const int i = ii*b + i_;
+             const int j = jj*b + j_;
+             const int k = kk*b + k_;
+             C[i*n + j] = C[i*n + j] + A[i*n + k] * B[k*n + j];
+          }
+\end{minted}
+  \end{onlyenv}
+\end{frame}
+\begin{frame}
+  \frametitle{What did that do to the data movement?}
+  \begin{align*}
+    m &= N n^2 \quad \text{each block of $B$ is read $N^3$ times
+        $\Rightarrow N^3 b^2 = N^3 (n/N)^2 = N n^2$}\\
+      &+ N n^2 \quad \text{each block of $A$ is read $N^3$ times}\\
+      &+ 2 n^2 \quad \text{each block of $C$ is read once and written
+        once}\\
+      &= 2n^2(N+1)
+  \end{align*}
+  Hence
+  \begin{equation*}
+    \lim_{n\to\infty} q = \frac{f}{m} = \frac{2 n^3}{2n^2(N + 1)} =
+    \frac{n}{N} = b
+  \end{equation*}
+
+  
+  \begin{itemize}
+  \item $b \gg 2$ so much better than previously. Can improve
+    performance by increasing $b$ \emph{as long as blocks still fit in
+      fast memory!}
+  \item Detailed analysis of blocked algorithms in Lam, Rothberg, and
+    Wolf \emph{The Cache Performance and Optimization of Blocked
+      Algorithms} (1991)
+  \end{itemize}
+\end{frame}
+\begin{frame}
+  \frametitle{From model to machine characteristics}
+  \begin{itemize}
+  \item Arbitrarily choose a ``fast'' algorithm to be $\ge 50\%$ peak,
+    this requires
+    \begin{equation*}
+      f t_f \left(1 + \frac{t_m}{t_f}\frac{1}{q}\right) \le 2 t_f f \Leftrightarrow \frac{t_m}{t_f}\frac{1}{q} \le 1
+      \Leftrightarrow q \ge \frac{t_m}{t_f}
+    \end{equation*}
+  \item Again, approximate $t_m = 25$, $t_f = 1$
+  \item[$\Rightarrow$] $b \approx q \ge 25$.
+  \item Need to hold all three $b \times b$ matrices in cache
+    
+  \item[$\Rightarrow$] Need space for $3 b^2 = 3 \cdot 25^2 = 1875$
+    matrix \emph{entries}, approximately $14.6$KB of fast memory $M_\text{fast}$.
+  \item This is smaller than L1, but larger than fits in registers.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Is this the best we can do?}
+  \begin{theorem}{Hong and Kung (1981)}
+    Any reorganization of this algorithm that only exploits
+    \emph{associativity} has
+    \begin{equation*}
+      q = \mathcal{O}(\sqrt{M_\text{fast}})
+    \end{equation*}
+    and the number of data elements moved between slow and fast memory
+    is
+    \begin{equation*}
+      \Omega\left(\frac{n^3}{\sqrt{M_\text{fast}}}\right)
+    \end{equation*}
+  \end{theorem}
+
+  \begin{itemize}
+  \item Exact values for the bounds are not known, the best bounds are
+    provided by Smith and van de Geijn (2017) \texttt{arXiv:
+      1702.02017 [cs.CC]}
+  \item The GotoBLAS/OpenBLAS approach approaches these bounds.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Matching reality with models}
+  \begin{itemize}
+  \item I provide some sample code that implements this scheme
+  \item[$\Rightarrow$] Exercise 8.
+  \end{itemize}
+  \begin{center}
+    \url{https://teaching.wence.uk/comp52315/exercises/exercise08/}
+  \end{center}
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{Is this the best we can do?}
+  \begin{center}
+    \begin{tikzpicture}
+      \pgfplotstableset{create on use/flops/.style={
+          create col/expr={1e-9*\thisrow{FLOP}/\thisrow{TIME}}}};
+      \begin{axis}[height=0.7\textheight,
+        xlabel near ticks,
+        xlabel={Matrix size},
+        ylabel near ticks,
+        ylabel={GFlop/s},
+        legend pos=outer north east]
+        \addplot+ table[x=N, y=flops] {../figures/gemm-basic.dat};
+        \addlegendentry{Triple loop};
+        \addplot+ table[x=N, y=flops] {../figures/gemm-tiled.dat};
+        \addlegendentry{Tiled};
+        \addplot+ table[x=N, y=flops] {../figures/gemm-tiled-packed.dat};
+        \addlegendentry{Tiled packed};
+        \addplot+ [domain=0:3072, mark=none, line width=2] {57.6/2};
+        \addlegendentry{Model};
+      \end{axis}
+    \end{tikzpicture}
+  \end{center}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Is this the best we can do?}
+  \begin{center}
+    \begin{tikzpicture}
+      \pgfplotstableset{create on use/flops/.style={
+          create col/expr={1e-9*\thisrow{FLOP}/\thisrow{TIME}}}};
+      \begin{axis}[height=0.7\textheight,
+        xlabel near ticks,
+        xlabel={Matrix size},
+        ylabel near ticks,
+        ylabel={GFlop/s},
+        legend pos=outer north east]
+        \addplot+ table[x=N, y=flops] {../figures/gemm-basic.dat};
+        \addlegendentry{Triple loop};
+        \addplot+ table[x=N, y=flops] {../figures/gemm-tiled.dat};
+        \addlegendentry{Tiled};
+        \addplot+ table[x=N, y=flops] {../figures/gemm-tiled-packed.dat};
+        \addlegendentry{Tiled packed};
+        \addplot+ [domain=0:3072, mark=none, line width=2] {57.6/2};
+        \addlegendentry{Model};
+
+        \addplot+ table[x=N, y=flops] {../figures/gemm-openblas.dat};
+        \addlegendentry{OpenBLAS};
+
+        \addplot+ [domain=0:3072, mark=none, line width=2] {57.6};
+        \addlegendentry{Machine peak};
+      \end{axis}
+    \end{tikzpicture}
+  \end{center}
+\end{frame}
+
+\begin{frame}
+  \frametitle{What accounts for this difference?}
+  \begin{itemize}
+  \item Managed to get big matrices to behave like small ones with
+    naive code.
+  \item[$\Rightarrow$] reaching in-cache performance of the starting
+    point.
+  \item For better results, need to
+    \begin{enumerate}
+    \item Block for registers and all levels of cache
+    \item Perform data-layout transformation to promote (better) vectorisation
+    \end{enumerate}
+  \item Will look more at data layout transforms next time.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Summary}
+  \begin{itemize}
+  \item Loop tiling can \emph{significantly} improve performance of
+    nested loops.
+  \item Particularly important to exploit data reuse.
+  \item For the ``last mile'' we have to do more. Mostly the same
+    idea, but thinking hard about data layout and explicit
+    vectorisation.
+  \item Simple models can be used to motivate whether things are worth trying.
+  \end{itemize}
+\end{frame}
+\end{document}
