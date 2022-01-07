@@ -7,3 +7,16 @@
 /figures/*.png
 /figures/*.svg
 /figures/*.pdf
+/slides/_minted-*/
+/slides/auto/
+/slides/*.aux
+/slides/*.log
+/slides/*.nav
+/slides/*.out
+/slides/*.pdf
+/slides/*.snm
+/slides/*.synctex.gz
+/slides/*.toc
+/slides/*.vrb
+/slides/*.fls
+/slides/*.fdb_latexmk

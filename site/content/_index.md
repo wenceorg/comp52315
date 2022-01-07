@@ -32,9 +32,27 @@ goal is to
 
 ## Course Organisation
 
-The course will run over four weeks starting on 10th January 2021.
+The course will run over four weeks starting on 10th January 2022.
 Each week there will be two sessions in MCS2094, scheduled at 9am
 on Mondays and 4pm on Tuesdays (UK time).
+
+{{< hint warning >}}
+
+In the first week of term (week beginning 10th January), the lectures
+are **online only**.
+
+{{< /hint >}}
+
+
+{{< hint info >}}
+
+You can attend remotely over [zoom](https://durhamuniversity.zoom.us/j/95150134609?pwd=eW5hTXRsZlQ0cnlBWlA0Z0F6Yjh4dz09), and will need to be
+authenticated with your Durham account.
+
+Meeting ID: 951 5013 4609  
+Passcode: 166174
+
+{{< /hint >}}
 
 There are a bunch of exercises which we'll mostly work on in the live
 sessions, their aim is to familiarise you with the tools we'll use for

@@ -1,0 +1,83 @@
+% Just \usepackage{template} in the preamble and it sets everything up.
+\usepackage{xspace}
+
+\usepackage{pifont}
+\newcommand{\cmark}{\ding{51}}
+\newcommand{\xmark}{\ding{55}}
+
+% Override these in the preamble of your document to get it right.
+\newcommand{\authorname}{XXX}
+\newcommand{\authoremail}{XXX}
+\newcommand{\sessionnumber}{X}
+\newcommand{\sessiontitle}{XXX}
+
+% No need to fix these
+\newcommand{\modulecode}{COMP52315}
+\newcommand{\thetitle}{Session \sessionnumber{}: \sessiontitle{}}
+\newcommand{\thesubtitle}{\modulecode{}: performance engineering}
+
+\usepackage{hyperref}
+\newcommand{\arxivlink}[2]{{\texttt{arXiv:\,\href{https://arxiv.org/abs/#1}{#1\,[#2]}}}}
+\title{\thetitle{}}
+\subtitle{\thesubtitle{}}
+\author{\authorname{}}
+\institute{
+  \authoremail{}
+}
+
+\graphicspath{{../}}
+% \titlegraphic{\hfill\includegraphics[height=1.5cm]{SchoolLogo}}
+
+\usepackage{appendixnumberbeamer}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{minted}
+
+% https://github.com/matze/mtheme
+\usetheme{metropolis}
+\metroset{background=light,progressbar=frametitle,numbering=counter,block=fill}
+
+\definecolor{purple}{HTML}{68246D}
+\definecolor{blue}{HTML}{002A41}
+\definecolor{red}{HTML}{BE1E2D}
+\definecolor{cyan}{HTML}{00AEEF}
+\definecolor{yellow}{HTML}{00AA1A}
+
+\newenvironment{variableblock}[3]
+{\setbeamercolor{block body}{#2}
+\setbeamercolor{block title}{#3}
+\begin{block}{#1}}%
+{\end{block}}
+  
+\newenvironment{challenge}[1]%
+{\begin{variableblock}{#1}{bg=red!20,fg=black}{bg=red,fg=white}}%
+{\end{variableblock}}
+
+\newenvironment{answer}[1]%
+{\begin{variableblock}{#1}{bg=cyan!20,fg=black}{bg=cyan,fg=white}}%
+{\end{variableblock}}
+
+\renewenvironment{exampleblock}[1]%
+{\begin{variableblock}{#1}{bg=yellow!20,fg=black}{bg=yellow,fg=white}}%
+{\end{variableblock}}
+
+\setbeamercolor{normal text}{
+  fg=black,
+  bg=white
+}
+\setbeamercolor{alerted text}{
+  fg=red
+}
+\setbeamercolor{example text}{
+  fg=blue
+}
+
+\setbeamercolor{palette primary}{%
+  use=normal text,
+  fg=normal text.bg,
+  bg=purple,
+}
+
+\setbeamertemplate{frame footer}{\modulecode{}---Session
+  \sessionnumber{}: \sessiontitle{}}
+\setbeamersize{text margin left=0.5cm, text margin right=0.5cm}
