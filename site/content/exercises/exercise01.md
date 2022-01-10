@@ -255,7 +255,9 @@ What floating point throughput do you observe for the SIMD
 (`sum_sp_avx`) case?
 {{< /question >}}
 
+<div id="vector-size"></div>
 {{< exercise >}}
+
 1. Study what happens to the performance (for both the
    `sum_sp` and `sum_sp_avx` benchmarks) when
    you vary the size of the vector from 1kB up to 128MB.
