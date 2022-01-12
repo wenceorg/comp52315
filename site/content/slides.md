@@ -26,7 +26,44 @@ The long form notes add words in between the bullet points.
   the last part of the exercise requires of you. We will discuss the
   results in the next session
   
-- [Session 2]({{< static-ref "lecture-slides/02.pdf" >}})
+- [Session 2]({{< static-ref "lecture-slides/02.pdf" >}}),
+  [annotated]({{< static-ref "lecture-slides/2021-22/02.pdf" >}}),
+  [video](https://durham.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=deba6d06-5908-49af-bf74-ae1a0143da57).
+  
+  I realised while we were doing the second exercise why I couldn't
+  reproduce the plot from the slides. I started at 1024kB, rather than
+  1kB. I should have looped from `seq 0 17` rather than `seq 10 17`.
+  The corrected script to collect all the data we need is
+  
+  ```sh
+  #!/bin/bash
+  
+  # 1 core
+  #SBATCH -n 1
+  #SBATCH --job-name="collect-bw"
+  #SBATCH -o collect-bw.%J.out
+  #SBATCH -e collect-bw.%J.err
+  #SBATCH -t 00:20:00
+  #SBATCH -p par7.q
+  
+  source /etc/profile.d/modules.sh
+  
+  module load likwid/5.0.1
+  
+  for n in $(seq 0 17)
+  do
+      size=$((2 ** n))
+      mflops_scalar=$(likwid-bench -t sum_sp -w S0:${size}kB:1 2>/dev/null | grep MFlops/s | cut -f 3)
+      mflops_avx=$(likwid-bench -t sum_sp_avx -w S0:${size}kB:1 2>/dev/null | grep MFlops/s | cut -f 3)
+      echo $size $mflops_scalar $mflops_avx
+  done
+  ```
+  
+  We didn't quite finish all of the slides, so we'll pick up where we
+  left off and use the results of the second exercise to build a
+  predictive model for the performance of the vectorised sum reduction
+  at the beginning of the next session.
+  
 - [Session 3]({{< static-ref "lecture-slides/03.pdf" >}})
 - Session 4 -- coming soon
 - Session 5 -- coming soon

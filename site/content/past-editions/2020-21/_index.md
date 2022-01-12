@@ -4,7 +4,7 @@ weight: 1
 draft: false
 ---
 
-## Annotated slides 2020/21 edition
+# Annotated slides 2020/21 edition
 
 Slides as annotated during the live lectures. Recordings of the live
 sessions are available if you're appropriately logged in. If you think
