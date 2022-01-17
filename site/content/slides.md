@@ -64,8 +64,27 @@ The long form notes add words in between the bullet points.
   predictive model for the performance of the vectorised sum reduction
   at the beginning of the next session.
   
-- [Session 3]({{< static-ref "lecture-slides/03.pdf" >}})
-- Session 4 -- coming soon
+- [Session 3]({{< static-ref "lecture-slides/03.pdf" >}}),
+  [annotated]({{< static-ref "lecture-slides/2021-22/03.pdf" >}}),
+  [video](https://durham.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=4f7435e0-1b80-4bd6-a9a3-ae2000c78ca7).
+  
+  We used the results of our benchmarking of the cache hierarchy to
+  construct a model for how fast the sum reductions should run as a
+  function of the vector size. It works pretty well! This was the end
+  of slides from session 2, I have updated the annotated version
+  above. Then I talked, probably for a bit long (sorry), about memory
+  bandwidth, resource restrictions and some philosophy of how to go
+  about thinking about optimising code. 
+  
+  We finished by talking about the [roofline
+  model](https://en.wikipedia.org/wiki/Roofline_model),
+  introduced in [Williams, Waterman, and Patterson
+  (2009)](https://people.eecs.berkeley.edu/~kubitron/cs252/handouts/papers/RooflineVyNoYellow.pdf).
+  Please read this paper before the session tomorrow and note any
+  questions or discussion points you might have on it, we'll read
+  through the paper in class and discuss it further then.
+
+- [Session 4]({{< static-ref "lecture-slides/04.pdf" >}})
 - Session 5 -- coming soon
 - Session 6 -- coming soon
 - Session 7 -- coming soon
