@@ -13,7 +13,7 @@ accessed via
 ## Background
 
 I provide [an implementation]({{< code-ref 5 "stream.c" >}}) (in
-`code/exeercise05/stream.c`) written in C
+`code/exercise05/stream.c`) written in C
 of the [STREAM TRIAD](https://www.cs.virginia.edu/stream/) benchmark.
 It provides scalar, SSE, and AVX implementations of the loop
 
