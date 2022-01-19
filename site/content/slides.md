@@ -84,8 +84,21 @@ The long form notes add words in between the bullet points.
   questions or discussion points you might have on it, we'll read
   through the paper in class and discuss it further then.
 
-- [Session 4]({{< static-ref "lecture-slides/04.pdf" >}})
-- Session 5 -- coming soon
-- Session 6 -- coming soon
+- [Session 4]({{< static-ref "lecture-slides/04.pdf" >}}),
+  [annotated]({{< static-ref "lecture-slides/2021-22/04.pdf" >}}),
+  [annotated roofline paper]({{< static-ref
+  "lecture-slides/2021-22/williams2009-roofline.pdf" >}}), [video](https://durham.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=a5d68405-a795-42c3-bc7b-ae21014beb02)
+  
+  We spent the first half of the session going over the roofline paper
+  and pointing out some key ideas.
+  
+  Then I started talking about performance counters and how to access
+  them. We finished by trying to confirm our hypotheses about some
+  simple stream code and how many loads and stores we would observe.
+  We didn't manage to do so in all cases, so we'll try and figure
+  things out next time.
+
+- [Session 5]({{< static-ref "lecture-slides/05.pdf" >}})
+- [Session 6]({{< static-ref "lecture-slides/06.pdf" >}})
 - Session 7 -- coming soon
 - Session 8 -- coming soon
