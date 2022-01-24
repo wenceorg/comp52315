@@ -98,7 +98,24 @@ The long form notes add words in between the bullet points.
   We didn't manage to do so in all cases, so we'll try and figure
   things out next time.
 
-- [Session 5]({{< static-ref "lecture-slides/05.pdf" >}})
+- [Session 5]({{< static-ref "lecture-slides/05.pdf" >}}),
+  [annotated]({{< static-ref "lecture-slides/2021-22/04.pdf" >}}),
+  [video](https://durham.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=b584f983-febd-4969-b691-ae2700c4eab1)
+  
+  We didn't make it very far through the session five slides, but did
+  finish session four on profiling (annotated slides above updated).
+  The low-level profiling toolkit on Linux-based systems is
+  [perf](https://perf.wiki.kernel.org/index.php/Main_Page), and
+  [Brendan Gregg](https://www.brendangregg.com/) has [many
+  examples](https://www.brendangregg.com/perf.html).
+  
+  We figured out what was going on with our measurements of memory
+  loads and stores for the simple example of [exercise 5]({{< ref
+  "exercises/exercise05.md" >}}). We needed to convince the compiler
+  to do the right thing in terms of the code it emitted, by adding
+  `-fno-inline -march=native` to the compile flags: I have updated the
+  exercise instructions.
+
 - [Session 6]({{< static-ref "lecture-slides/06.pdf" >}})
 - Session 7 -- coming soon
 - Session 8 -- coming soon
