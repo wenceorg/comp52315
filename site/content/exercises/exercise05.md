@@ -39,10 +39,10 @@ therefore need to enable these when compiling. As before we load the
 likwid module with `module load likwid/5.0.1`.
 
 We can safely compile this code with GCC, load the GCC module with
-`module load gcc/8.2.0` and run:
+`module load gcc/9.3.0` and run:
 
 ```
-gcc -std=c99 -mfma -O1 -DLIKWID_PERFMON -o stream stream.c -llikwid
+gcc -std=c99 -mfma -O1 -DLIKWID_PERFMON -fno-inline -march=native -o stream stream.c -llikwid
 ```
 
 The flag `-DLIKWID_PERFMON` adds a new symbol in the
@@ -51,7 +51,6 @@ to link against the likwid runtime library with `-llikwid`.
 To ensure that this library is available when you run the code, you
 should load the likwid module on the compute node (or run `module
 load likwid/5.0.1` in your batch submission script).
-
 
 For this exercise, `likwid-perfctr` does not give us an appropriate
 predefined group. Instead, we must use a low-level counter directly.
@@ -109,4 +108,26 @@ about 300000 loads.
    versions of the code?
 2. How many stores do you measure?
 3. Can you find a way of measuring the stores and loads in one go?
+{{< /question >}}
+
+{{< question >}}
+Try compiling the code with:
+
+```
+gcc -std=c99 -mfma -O1 -DLIKWID_PERFMON -fno-inline -o stream stream.c -llikwid
+```
+
+Do you still measure the same instruction counts for all cases?
+
+To understand what is going on, we can inspect the assembly code for
+these two cases by getting the compiler to spit that out instead:
+
+```
+gcc -std=c99 -mfma -O1 -DLIKWID_PERFMON -fno-inline -S -o stream-no-march.s stream.c -llikwid
+
+gcc -std=c99 -mfma -O1 -DLIKWID_PERFMON -fno-inline -march=native -S -o stream-march-native.s stream.c -llikwid
+```
+
+Compare the loop bodies for the functions, do you observe any
+differences in the assembly that might explain things?
 {{< /question >}}
