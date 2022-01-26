@@ -116,6 +116,24 @@ The long form notes add words in between the bullet points.
   `-fno-inline -march=native` to the compile flags: I have updated the
   exercise instructions.
 
-- [Session 6]({{< static-ref "lecture-slides/06.pdf" >}})
-- Session 7 -- coming soon
+- [Session 6 (didn't get to these slides)]({{< static-ref "lecture-slides/06.pdf" >}}), [updated
+  annotated session 5 slides]()
+  [video](https://durham.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=d7309aaa-c6c8-4b31-96b7-ae280132de5c).
+  
+  We went through cache blocking/loop tiling in more detail, and
+  constructed a model for how dense matrix-matrix multiplication might
+  perform. I left the part of the video in the middle where I did one
+  of the exercises so you can observe my process if you like (I didn't
+  submit to the batch system because I was a bad person).
+  
+  For next time, we'll look at data layout transformations and
+  vectorisation, please read through [Henretty et al. (2011), _Data Layout
+  Transformation for Stencil Computations on Short-Vector SIMD
+  Architectures_](https://web.cs.ucla.edu/~pouchet/doc/cc-article.11.pdf)
+  and think of any questions or comments you might have about it for
+  next time: we'll go through this paper and the session 6 slides on
+  Monday. You might also find glancing at the sesion 7 slides helpful
+  for the paper reading.
+
+- [Session 7]({{< static-ref "lecture-slides/07.pdf" >}})
 - Session 8 -- coming soon
