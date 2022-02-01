@@ -117,7 +117,8 @@ The long form notes add words in between the bullet points.
   exercise instructions.
 
 - [Session 6 (didn't get to these slides)]({{< static-ref "lecture-slides/06.pdf" >}}), [updated
-  annotated session 5 slides]()
+  annotated session 5 slides]({{< static-ref
+  "lecture-slides/2021-22/05.pdf" >}})
   [video](https://durham.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=d7309aaa-c6c8-4b31-96b7-ae280132de5c).
   
   We went through cache blocking/loop tiling in more detail, and
@@ -135,5 +136,18 @@ The long form notes add words in between the bullet points.
   Monday. You might also find glancing at the sesion 7 slides helpful
   for the paper reading.
 
-- [Session 7]({{< static-ref "lecture-slides/07.pdf" >}})
+- [annotated session 6 slides]({{< static-ref "lecture-slides/2021-22/06.pdf" >}}),
+  [annotated Henretty (2011) paper]({{< static-ref
+  "lecture-slides/2021-22/stencil-data-layout.pdf" >}})
+  [video](https://durham.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=6d609469-e249-4ae5-a362-ae2e00c4d672)
+  
+  We talked about data layout transformations and vectorisation, and
+  then read through the paper on data layout transformations for
+  stencil computations. The main idea is that it is sometimes
+  possible, and preferable to restructure both the code _and_ data to
+  permit more efficient vectorisation. The key ideas in the paper are
+  also covered in the [session 7 slides]({{< static-ref
+  "lecture-slides/07.pdf" >}}), which we didn't go over in class.
+  
+
 - Session 8 -- coming soon
