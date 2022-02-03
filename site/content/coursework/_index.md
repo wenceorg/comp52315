@@ -6,6 +6,12 @@ katex: true
 
 # Fast finite elements
 
+{{< hint warning >}}
+
+The submission deadline for this work is 2022-02-21 at 14:00UTC.
+
+{{< /hint >}}
+
 ## Introduction
 
 The finite element method is a popular and flexible method for the
