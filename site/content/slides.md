@@ -136,7 +136,7 @@ The long form notes add words in between the bullet points.
   Monday. You might also find glancing at the sesion 7 slides helpful
   for the paper reading.
 
-- [annotated session 6 slides]({{< static-ref "lecture-slides/2021-22/06.pdf" >}}),
+- Session 7: [annotated session 6 slides]({{< static-ref "lecture-slides/2021-22/06.pdf" >}}),
   [annotated Henretty (2011) paper]({{< static-ref
   "lecture-slides/2021-22/stencil-data-layout.pdf" >}})
   [video](https://durham.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=6d609469-e249-4ae5-a362-ae2e00c4d672)
@@ -150,4 +150,17 @@ The long form notes add words in between the bullet points.
   "lecture-slides/07.pdf" >}}), which we didn't go over in class.
   
 
-- Session 8 -- coming soon
+- Session 8 [scribbles]({{< static-ref "lecture-slides/2021-22/08.pdf"
+  >}}),
+  [video](https://durham.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=fff86be1-ecf5-4629-b3df-ae2f0129effe)
+  
+  I talked a little about the computational model in the finite
+  element method (which forms the basis of the code that we're looking
+  at in the [coursework]({{< ref "coursework.md" >}}). In particular
+  focusing on how much compute and how much data movement happens.
+  
+  If you run on
+  [Hamilton8](https://www.dur.ac.uk/arc/hamilton/migration/) `likwid`
+  is still available (contrary to what I stated live).
+  
+  
