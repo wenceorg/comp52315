@@ -96,6 +96,7 @@ $ for N in 100 200 300 500 700 1000 1500 2000 2500 3000 4000 5000; do
 
 This prints a bunch of output, which I elide, but we can put it in a
 table
+
 | $N$  | BW [MB/s] |
 |------|-----------|
 | 100  | 60000     |
