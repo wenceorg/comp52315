@@ -1,3 +1,5 @@
+This repository was updated until March 2022 when I left Durham University. The materials herein are therefore not necessarily still in date.
+
 Source repository for
 [COMP52315](https://www.dur.ac.uk/postgraduate.modules/module_description/?year=2020&module_code=COMP52315).
 
