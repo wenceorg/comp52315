@@ -1,0 +1,108 @@
+<!doctype html><html lang=en dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="Finding a hotspot and determining the execution limits #  So far, we&rsquo;ve only run very simple benchmarks. Now we&rsquo;re going to try and find some information in a larger code. We will look at the miniMD application which has been developed as part of the Mantevo project. This is a molecular dynamics code that implements algorithms and data structures from a large research code, but in a small package that is amenable to benchmarking and trying out different optimisations."><meta name=theme-color content="#FFFFFF"><meta property="og:title" content="Profiling"><meta property="og:description" content="Finding a hotspot and determining the execution limits #  So far, we&rsquo;ve only run very simple benchmarks. Now we&rsquo;re going to try and find some information in a larger code. We will look at the miniMD application which has been developed as part of the Mantevo project. This is a molecular dynamics code that implements algorithms and data structures from a large research code, but in a small package that is amenable to benchmarking and trying out different optimisations."><meta property="og:type" content="article"><meta property="og:url" content="https://teaching.wence.uk/comp52315/exercises/exercise06/"><meta property="article:modified_time" content="2022-04-07T18:18:31+01:00"><title>Profiling | COMP52315 – Performance Engineering</title><link rel=icon href=/comp52315/favicon.svg type=image/x-icon><link rel=stylesheet href=/comp52315/book.min.0cb0b7d6a1ed5d0e95321cc15edca4d6e9cc406149d1f4a3f25fd532f6a3bb38.css integrity="sha256-DLC31qHtXQ6VMhzBXtyk1unMQGFJ0fSj8l/VMvajuzg="></head><body dir=ltr><input type=checkbox class="hidden toggle" id=menu-control>
+<input type=checkbox class="hidden toggle" id=toc-control><main class="container flex"><aside class=book-menu><nav><div class=book-brand><img class=book-center src=/comp52315/logo.svg alt=Logo><h2><a href=/comp52315>COMP52315 – Performance Engineering</a></h2></div><ul><li><span>Administrivia</span><ul><li><a href=/comp52315/setup/contact/>Contact details</a></li><li><a href=/comp52315/setup/hamilton/>Hamilton accounts</a></li><li><a href=/comp52315/setup/configuration/>ssh configuration</a></li><li><a href=/comp52315/setup/unix/>Unix resources</a></li></ul></li><li><span>Exercises</span><ul><li><a href=/comp52315/exercises/exercise01/>Sum reductions</a></li><li><a href=/comp52315/exercises/exercise02/>Caches</a></li><li><a href=/comp52315/exercises/exercise03/>Memory bandwidth</a></li><li><a href=/comp52315/exercises/exercise04/>Roofline analysis</a></li><li><a href=/comp52315/exercises/exercise05/>Models and measurements</a></li><li><a href=/comp52315/exercises/exercise06/ class=active>Profiling</a></li><li><a href=/comp52315/exercises/exercise07/>Loop tiling matrix transpose</a></li><li><a href=/comp52315/exercises/exercise08/>Loop tiling matrix-matrix multiplication</a></li><li><a href=/comp52315/exercises/exercise09/>Compiler feedback and the BLIS DGEMM</a></li><li><a href=/comp52315/exercises/exercise10/>Stencil layer conditions</a></li></ul></li><li><span>Notes</span><ul><li><a href=/comp52315/notes/introduction/>Introduction</a></li><li><a href=/comp52315/notes/memory/>The memory hierarchy</a></li><li><a href=/comp52315/notes/roofline/>Performance models: roofline</a></li><li><a href=/comp52315/notes/measurements/>Measurement and profiling</a></li><li><a href=/comp52315/notes/tiling/>Cache blocking/tiling</a></li></ul></li><li><a href=/comp52315/slides/>Slides</a></li><li><a href=/comp52315/coursework/>Coursework: fast finite elements</a><ul></ul></li><li><a href=/comp52315/resources/>Further resources</a></li><li><a href=/comp52315/acknowledgements/>Acknowledgements</a></li><li><span>Past editions</span><ul><li><a href=/comp52315/past-editions/2020-21/>2020/21</a><ul></ul></li></ul></li></ul></nav><script>(function(){var menu=document.querySelector("aside.book-menu nav");addEventListener("beforeunload",function(event){localStorage.setItem("menu.scrollTop",menu.scrollTop);});menu.scrollTop=localStorage.getItem("menu.scrollTop");})();</script></aside><div class=book-page><header class=book-header><div class="flex align-center justify-between"><label for=menu-control><img src=/comp52315/svg/menu.svg class=book-icon alt=Menu></label>
+<strong>Profiling</strong>
+<label for=toc-control><img src=/comp52315/svg/toc.svg class=book-icon alt="Table of Contents"></label></div><aside class="hidden clearfix"><nav id=TableOfContents><ul><li><a href=#finding-a-hotspot-and-determining-the-execution-limits>Finding a hotspot and determining the execution limits</a><ul><li><a href=#download-and-compile>Download and compile</a></li><li><a href=#compile-and-run-with-profiling-enabled>Compile and run with profiling enabled</a><ul><li><a href=#generating-graphical-call-graphs-from-gprof-output>Generating graphical call graphs from gprof output</a></li></ul></li><li><a href=#instrumenting-hotspot-functions-with-likwid>Instrumenting hotspot functions with likwid</a></li></ul></li></ul></nav></aside></header><article class=markdown><blockquote class="book-hint warning"><span>This course page was updated until March 2022 when I left Durham University.
+The materials herein are therefore not necessarily still in date.</span></blockquote><h1 id=finding-a-hotspot-and-determining-the-execution-limits>Finding a hotspot and determining the execution limits
+<a class=anchor href=#finding-a-hotspot-and-determining-the-execution-limits>#</a></h1><p>So far, we&rsquo;ve only run very simple benchmarks. Now we&rsquo;re going to try
+and find some information in a larger code. We will look at the
+<a href=https://github.com/Mantevo/miniMD><code>miniMD</code></a> application which has
+been developed as part of the <a href=https://mantevo.github.io>Mantevo</a>
+project. This is a molecular dynamics code that implements algorithms
+and data structures from a large research code, but in a small package
+that is amenable to benchmarking and trying out different
+optimisations.</p><p>The aim is to run and profile the code to determine where it spends
+all its time, and then dig a little deeper using likwid markers and
+the performance counters API.</p><h2 id=download-and-compile>Download and compile
+<a class=anchor href=#download-and-compile>#</a></h2><p><code>miniMD</code> is maintained on
+<a href=https://github.com/Mantevo/miniMD/>GitHub</a>, so after logging in to
+Hamilton, you can get the source code with</p><pre><code>git clone https://github.com/Mantevo/miniMD.git
+</code></pre><p>The code is parallelised with MPI, so we need to load some modules to
+make the right compilers available.</p><pre><code>module load gcc/8.2.0
+module load intel/2019.5
+module load intelmpi/intel/2019.6
+</code></pre><p>We will compile the &ldquo;reference&rdquo; implementation which is the in <code>ref</code>
+subdirectory. The build system uses
+<a href=https://www.gnu.org/software/make/><code>make</code></a>, so first we&rsquo;ll just
+compile and check things work. Run <code>make intel</code>. You should see some
+output, which ends with</p><pre><code>size ../miniMD_intel
+   text    data     bss     dec     hex filename
+ 219867   20880    2304  243051   3b56b ../miniMD_intel
+make[1]: Leaving directory `.../miniMD/ref/Obj_intel'
+</code></pre><p>You can check the compilation was successful with <code>make test</code></p><h2 id=compile-and-run-with-profiling-enabled>Compile and run with profiling enabled
+<a class=anchor href=#compile-and-run-with-profiling-enabled>#</a></h2><p>Having verified the code runs correctly, we will now recompile with
+profiling enabled. First run <code>make clean</code> to delete the
+executable. You will need to edit the <code>Makefile.intel</code> file
+to add <code>-pg</code> to the compile and link flags (do this by
+modifying the <code>CCFLAGS</code> and <code>LINKFLAGS</code>
+variables). Now run <code>make intel</code> again.</p><blockquote class="book-hint info"><span>For more information on gprof, the HPC centre at Lawrence Livermore
+have a <a href=https://hpc.llnl.gov/software/development-environment-software/gprof#documentation>useful introductory
+tutorial</a>.</span></blockquote><blockquote class=exercise><h3>Exercise</h3><span><ol><li>Profile the default run on a compute node. This should
+produce a <code>gmon.out</code> file.</li><li>Produce the gprofile output with <code>gprof ./miniMD_Intel gmon.out</code>
+(if it scrolls off the screen, you can redirect the output to a
+text file by appending <code>> SOMETEXTFILE.txt</code> to the
+command and then look at it in an editor)</li></ol></span></blockquote><blockquote class=question><h3>Question</h3><span>Where does the code spend most of its time?</span></blockquote><blockquote class=exercise><h3>Exercise</h3><span><p><code>miniMD</code> implements a few different algorithms
+which can be selected with command line options and choosing
+the right input file. Run profiling for the following sets of options.</p><ol><li><code>./miniMD_intel -i in.lj.miniMD --half_neigh 0</code></li><li><code>./miniMD_intel -i in.lj.miniMD --half_neigh 1</code></li><li><code>./miniMD_intel -i in.eam.miniMD --half_neigh 0</code></li><li><code>./miniMD_intel -i in.eam.miniMD --half_neigh 1</code></li></ol></span></blockquote><blockquote class=question><h3>Question</h3><span>Do you always see the same functions at the top of
+the profile?</span></blockquote><blockquote class="book-hint warning"><span>Note: a program instrumented with gprof will always write its output
+to <code>gmon.out</code> (overwriting any previous information). So
+you should make sure to move the <code>gmon.out</code> from each run
+to a unique name (perhaps describing briefly what you did) before
+running the next benchmark.</span></blockquote><h3 id=generating-graphical-call-graphs-from-gprof-output>Generating graphical call graphs from gprof output
+<a class=anchor href=#generating-graphical-call-graphs-from-gprof-output>#</a></h3><p>Inspecting the gprof output just as a text file can be slightly hard
+to understand. A clearly overview can often be obtained by creating a
+visualisation of the call graph. We can do this with
+<a href=https://github.com/jrfonseca/gprof2dot><code>gprof2dot</code></a> which is a
+Python package that turns gprof (and other profiling output) into the
+<a href=https://graphviz.gitlab.io/documentation/>dot</a> graph format. This
+can then be converted to PDF, PNG, or other graphical formats (see the
+<a href=https://graphviz.gitlab.io/documentation/>graphviz documentation</a>
+for more details).</p><p>Minimally, having installed <code>gprof2dot</code> and graphviz, you can generate
+a call graph. First, you need to convert the <code>gmon.out</code> to the textual
+format, with <code>gprof ./miniMD_intel gmon.out > gmon-output.txt</code>. Then
+run <code>gprof2dot gmon-output.txt -o gmon-output.dot</code>. Finally, use <code>dot -Tpdf gmon-output.dot -o callgraph.pdf</code> to generate a PDF.</p><h2 id=instrumenting-hotspot-functions-with-likwid>Instrumenting hotspot functions with likwid
+<a class=anchor href=#instrumenting-hotspot-functions-with-likwid>#</a></h2><p>Having determined which functions are the hotspots, we&rsquo;ll try and get
+some more information about their performance. For this, we will use
+<code>likwid-perfctr</code> and its <a href=https://github.com/RRZE-HPC/likwid/wiki/likwid-perfctr#using-the-marker-api>marker
+API</a>.
+We&rsquo;ll therefore need the likwid tools, so <code>module load likwid/5.0.1</code>
+(remember that you will need to do this in the batch script, or on the
+compute node too).</p><p>To do this, you will need to find the locations in the source files of
+the functions you identified. A simple thing to do is to use
+<code>grep</code> to find the locations. Running <code>grep -n NAME_OF_FUNCTION *.cpp</code> will search for
+<code>NAME_OF_FUNCTION</code> in all the cpp files and print matches,
+along with line numbers.</p><p>For instrumentation with the marker API, we need to add start/stop
+markers in the functions we care about, and also switch the markers on
+in the main program. To get the relevant definitions in each file
+you&rsquo;ve identified as relevant, add the following after the existing
+includes.</p><div id=ref:includes><div class=highlight><pre style=color:#272822;background-color:#fafafa><code class=language-c data-lang=c><span style=color:#75715e>#ifdef LIKWID_PERFMON
+</span><span style=color:#75715e>#include</span> <span style=color:#75715e>&lt;likwid.h&gt;</span><span style=color:#75715e>
+</span><span style=color:#75715e>#else
+</span><span style=color:#75715e>#define LIKWID_MARKER_START(a) do { (void)a; } while (0)
+</span><span style=color:#75715e>#define LIKWID_MARKER_STOP(a) do { (void)a; } while (0)
+</span><span style=color:#75715e>#define LIKWID_MARKER_INIT do { } while (0)
+</span><span style=color:#75715e>#define LIKWID_MARKER_THREADINIT do { } while (0)
+</span><span style=color:#75715e>#define LIKWID_MARKER_CLOSE do { } while (0)
+</span><span style=color:#75715e>#define LIKWID_MARKER_REGISTER(a) do { (void)a; } while (0)
+</span><span style=color:#75715e>#endif  </span><span style=color:#75715e>/* LIKWID_PERFMON */</span><span style=color:#75715e>
+</span></code></pre></div></div><p>Then for each function you want to instrument in that file add</p><div class=highlight><pre style=color:#272822;background-color:#fafafa><code class=language-c data-lang=c><span style=color:#111>LIKWID_MARKER_START</span><span style=color:#111>(</span><span style=color:#d88200>&#34;SOMEAPPROPRIATENAME&#34;</span><span style=color:#111>);</span>
+</code></pre></div><p>at the beginning of the function and</p><div class=highlight><pre style=color:#272822;background-color:#fafafa><code class=language-c data-lang=c><span style=color:#111>LIKWID_MARKER_STOP</span><span style=color:#111>(</span><span style=color:#d88200>&#34;SOMEAPPROPRIATENAME&#34;</span><span style=color:#111>);</span>
+</code></pre></div><p>before the function returns.</p><blockquote class="book-hint warning"><span>Be careful to check that the function
+doesn&rsquo;t <code>return</code> anywhere before reaching
+the <code>LIKWID_MARKER_STOP</code> call.</span></blockquote><p>Finally, edit <code>ljs.cpp</code> and add <a href=#ref:includes>the includes</a> near the top of the file (as before). In the <code>main</code> function, add</p><div class=highlight><pre style=color:#272822;background-color:#fafafa><code class=language-c data-lang=c><span style=color:#111>LIKWID_MARKER_INIT</span><span style=color:#111>;</span>
+<span style=color:#111>LIKWID_MARKER_THREADINIT</span><span style=color:#111>;</span>
+</code></pre></div><p>at the beginning of the function and</p><div class=highlight><pre style=color:#272822;background-color:#fafafa><code class=language-c data-lang=c><span style=color:#111>LIKWID_MARKER_CLOSE</span><span style=color:#111>;</span>
+</code></pre></div><p>at the end (before the <code>return</code>).</p><p>Lastly, we need to add some more flags in the makefile, so edit
+<code>Makefile.intel</code> and <em>remove</em> <code>-pg</code> from both <code>CCFLAGS</code> and
+<code>LINKFLAGS</code>. You&rsquo;ll then need to add <code>-DLIKWID_PERFMON</code> to <code>CCFLAGS</code> and
+<code>-DLIKWID_PERFMON -llikwid</code> to <code>LINKFLAGS</code>. Finally, we&rsquo;re ready to
+rebuild everything, so run <code>make intel</code>.</p><p>If you run <code>./miniMD_intel</code> on its own, everything should work, but
+you should see <code>Running without Marker API. Activate Marker API with -m on commandline.</code> being printed (this indicates that we managed to
+successfully add all the performance monitoring, but are not yet using
+<code>likwid-perfctr</code>).</p><blockquote class=exercise><h3>Exercise</h3><span>Run a profile of the memory and floating point performance using
+<code>likwid-perfctr -C 0 -g MEM_DP -m ./miniMD_intel -i in.lj.miniMD --half_neigh 1</code>.</span></blockquote><blockquote class=question><h3>Question</h3><span>What computational intensity do you observe? For this computational
+intensity, is the code at the roofline limit?</span></blockquote><blockquote class=exercise><h3>Exercise</h3><span>Try the same profiling, but this time with with <code>--half_neigh 0</code> and
+the <code>in.eam.miniMD</code> input file.</span></blockquote><blockquote class=question><h3>Question</h3><span>Do you notice any differences in the profiles?</span></blockquote><blockquote class=question><h3>Question</h3><span>Can you suggest some next steps to try and improve performance?</span></blockquote></article><footer class=book-footer><div class="flex flex-wrap justify-between"><div><a class="flex align-center" href=https://github.com/wenceorg/comp52315/commit/cdfbd8f86c56d4a17e7e322b59a75940cea4fb4e title="Last modified by Lawrence Mitchell | April 7, 2022" target=_blank rel=noopener><img src=/comp52315/svg/calendar.svg class=book-icon alt=Calendar>
+<span>April 7, 2022</span></a></div><div><a class="flex align-center" href=https://github.com/wenceorg/comp52315/edit/main/site/content//exercises/exercise06.md target=_blank rel=noopener><img src=/comp52315/svg/edit.svg class=book-icon alt=Edit>
+<span>Edit this page</span></a></div></div><div class="flex flex-wrap align-right"><p>© 2020&ndash; <a href=mailto:lawrence.mitchell@durham.ac.uk>Lawrence Mitchell</a> and <a href=https://www.dur.ac.uk/>Durham University</a>.</p><p><a rel=license href=http://creativecommons.org/licenses/by-sa/4.0/><img alt="Creative Commons License" style=border-width:0 src=/comp52315/cc-by-sa.svg></a>
+This work is licensed under a <a rel=license href=http://creativecommons.org/licenses/by-sa/4.0/>Creative
+Commons Attribution-ShareAlike 4.0 International License</a>.</p></div></footer><label for=menu-control class="hidden book-menu-overlay"></label></div><aside class=book-toc><nav id=TableOfContents><ul><li><a href=#finding-a-hotspot-and-determining-the-execution-limits>Finding a hotspot and determining the execution limits</a><ul><li><a href=#download-and-compile>Download and compile</a></li><li><a href=#compile-and-run-with-profiling-enabled>Compile and run with profiling enabled</a><ul><li><a href=#generating-graphical-call-graphs-from-gprof-output>Generating graphical call graphs from gprof output</a></li></ul></li><li><a href=#instrumenting-hotspot-functions-with-likwid>Instrumenting hotspot functions with likwid</a></li></ul></li></ul></nav></aside></main></body></html>

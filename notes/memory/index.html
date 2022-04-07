@@ -1,0 +1,341 @@
+<!doctype html><html lang=en dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="An overview of memory hierarchies #  Reduction benchmark #  In exercise 1 you looked at the performance of a vectorised and non-vectorised version of a very simple loop computing the sum of an array of floating point numbers.
+In doing so, you produced a plot of the performance (in terms of floating point throughput) as a function of array size. You should have observed something similar to that shown here."><meta name=theme-color content="#FFFFFF"><meta property="og:title" content="The memory hierarchy"><meta property="og:description" content="An overview of memory hierarchies #  Reduction benchmark #  In exercise 1 you looked at the performance of a vectorised and non-vectorised version of a very simple loop computing the sum of an array of floating point numbers.
+In doing so, you produced a plot of the performance (in terms of floating point throughput) as a function of array size. You should have observed something similar to that shown here."><meta property="og:type" content="article"><meta property="og:url" content="https://teaching.wence.uk/comp52315/notes/memory/"><meta property="article:modified_time" content="2022-04-07T18:18:31+01:00"><title>The memory hierarchy | COMP52315 – Performance Engineering</title><link rel=icon href=/comp52315/favicon.svg type=image/x-icon><link rel=stylesheet href=/comp52315/book.min.0cb0b7d6a1ed5d0e95321cc15edca4d6e9cc406149d1f4a3f25fd532f6a3bb38.css integrity="sha256-DLC31qHtXQ6VMhzBXtyk1unMQGFJ0fSj8l/VMvajuzg="><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css integrity=sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X crossorigin=anonymous><script defer src=https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.js integrity=sha384-g7c+Jr9ZivxKLnZTDUhnkOnsh30B4H0rpLUpJ4jAIKs4fnJI+sEnkvrMWph2EDg4 crossorigin=anonymous></script><script defer src=https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/contrib/auto-render.min.js integrity=sha384-mll67QQFJfxn0IYznZYonOWZ644AWYC+Pt2cHqMaRhXVrursRwvLnLaebdGIlYNa crossorigin=anonymous></script><script>document.addEventListener("DOMContentLoaded",function(){renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false},{left:"\\(",right:"\\)",display:false},{left:"\\[",right:"\\]",display:true}]})});</script></head><body dir=ltr><input type=checkbox class="hidden toggle" id=menu-control>
+<input type=checkbox class="hidden toggle" id=toc-control><main class="container flex"><aside class=book-menu><nav><div class=book-brand><img class=book-center src=/comp52315/logo.svg alt=Logo><h2><a href=/comp52315>COMP52315 – Performance Engineering</a></h2></div><ul><li><span>Administrivia</span><ul><li><a href=/comp52315/setup/contact/>Contact details</a></li><li><a href=/comp52315/setup/hamilton/>Hamilton accounts</a></li><li><a href=/comp52315/setup/configuration/>ssh configuration</a></li><li><a href=/comp52315/setup/unix/>Unix resources</a></li></ul></li><li><span>Exercises</span><ul><li><a href=/comp52315/exercises/exercise01/>Sum reductions</a></li><li><a href=/comp52315/exercises/exercise02/>Caches</a></li><li><a href=/comp52315/exercises/exercise03/>Memory bandwidth</a></li><li><a href=/comp52315/exercises/exercise04/>Roofline analysis</a></li><li><a href=/comp52315/exercises/exercise05/>Models and measurements</a></li><li><a href=/comp52315/exercises/exercise06/>Profiling</a></li><li><a href=/comp52315/exercises/exercise07/>Loop tiling matrix transpose</a></li><li><a href=/comp52315/exercises/exercise08/>Loop tiling matrix-matrix multiplication</a></li><li><a href=/comp52315/exercises/exercise09/>Compiler feedback and the BLIS DGEMM</a></li><li><a href=/comp52315/exercises/exercise10/>Stencil layer conditions</a></li></ul></li><li><span>Notes</span><ul><li><a href=/comp52315/notes/introduction/>Introduction</a></li><li><a href=/comp52315/notes/memory/ class=active>The memory hierarchy</a></li><li><a href=/comp52315/notes/roofline/>Performance models: roofline</a></li><li><a href=/comp52315/notes/measurements/>Measurement and profiling</a></li><li><a href=/comp52315/notes/tiling/>Cache blocking/tiling</a></li></ul></li><li><a href=/comp52315/slides/>Slides</a></li><li><a href=/comp52315/coursework/>Coursework: fast finite elements</a><ul></ul></li><li><a href=/comp52315/resources/>Further resources</a></li><li><a href=/comp52315/acknowledgements/>Acknowledgements</a></li><li><span>Past editions</span><ul><li><a href=/comp52315/past-editions/2020-21/>2020/21</a><ul></ul></li></ul></li></ul></nav><script>(function(){var menu=document.querySelector("aside.book-menu nav");addEventListener("beforeunload",function(event){localStorage.setItem("menu.scrollTop",menu.scrollTop);});menu.scrollTop=localStorage.getItem("menu.scrollTop");})();</script></aside><div class=book-page><header class=book-header><div class="flex align-center justify-between"><label for=menu-control><img src=/comp52315/svg/menu.svg class=book-icon alt=Menu></label>
+<strong>The memory hierarchy</strong>
+<label for=toc-control><img src=/comp52315/svg/toc.svg class=book-icon alt="Table of Contents"></label></div><aside class="hidden clearfix"><nav id=TableOfContents><ul><li><a href=#an-overview-of-memory-hierarchies>An overview of memory hierarchies</a><ul><li><a href=#reduction-benchmark>Reduction benchmark</a></li><li><a href=#memory-hierarchy>Memory hierarchy</a></li><li><a href=#caches>Caches</a><ul><li><a href=#principle-of-locality>Principle of locality</a><ul><li><a href=#temporal-locality>Temporal locality</a></li><li><a href=#spatial-locality>Spatial locality</a></li></ul></li><li><a href=#high-level-design-of-caches>High-level design of caches</a><ul><li><a href=#eviction-from-caches>Eviction from caches</a></li></ul></li><li><a href=#programming-cache-friendly-algorithms>Programming cache friendly algorithms</a></li></ul></li><li><a href=#measurement-of-cache-bandwidth>Measurement of cache bandwidth</a></li><li><a href=#a-predictive-model-for-reductions>A predictive model for reductions</a><ul><li><a href=#l1-bandwidth>L1 bandwidth</a></li><li><a href=#l2-bandwidth>L2 bandwidth</a></li><li><a href=#l3-and-main-memory-bandwidth>L3 and main memory bandwidth</a></li></ul></li><li><a href=#stepping-back>Stepping back</a></li><li><a href=#scalable-and-saturating-resources>Scalable and saturating resources</a></li><li><a href=#summary-challenges-for-writing-high-performance-code>Summary: challenges for writing high performance code</a></li></ul></li></ul></nav></aside></header><article class=markdown><blockquote class="book-hint warning"><span>This course page was updated until March 2022 when I left Durham University.
+The materials herein are therefore not necessarily still in date.</span></blockquote><h1 id=an-overview-of-memory-hierarchies>An overview of memory hierarchies
+<a class=anchor href=#an-overview-of-memory-hierarchies>#</a></h1><h2 id=reduction-benchmark>Reduction benchmark
+<a class=anchor href=#reduction-benchmark>#</a></h2><p>In <a href=https://teaching.wence.uk/comp52315/exercises/exercise01/>exercise 1</a> you looked at the
+performance of a vectorised and non-vectorised version of a very
+simple loop computing the sum of an array of floating point numbers.</p><p>In doing so, you produced a plot of the performance (in terms of
+floating point throughput) as a function of array size. You should
+have observed something similar to that shown here.</p><figure style=width:60%><img class=scaled src=https://teaching.wence.uk/comp52315/images/auto/sum-reduction-throughput.svg alt="Scalar and AVX-enabled throughput of vector dot product as measured with likwid-bench."><figcaption><p>Scalar and AVX-enabled throughput of vector dot product as measured with <code>likwid-bench</code>.</p></figcaption></figure><p>We see that the <abbr title="Single Instruction Multiple
+Data">SIMD</abbr> (vectorised) code has four distinct performance
+plateaus as a function of the array size, whereas the scalar code has
+only two.</p><p>On this hardware (Broadwell), the chip can issue up to one floating
+point <code>ADD</code> (scalar or vector) per cycle. The peak clock speed is
+2.9GHz. So the peak scalar throughput of addition is 2.9GFlops/s,
+while the peak vector throughput is \(2.9 \times 8 = 23.2\)GFlops/s.</p><blockquote class="book-hint info"><span>How do I know the instruction issue rate? It is advertised in some of
+the Intel optimisation manuals. It&rsquo;s also in <a href=https://www.agner.org>Agner
+Fog&rsquo;s</a> reference on <a href=https://www.agner.org/optimize/instruction_tables.pdf>instruction
+latency</a>, see
+the table for Intel Broadwell, starting on page 232. Alternatively, I
+can go to <a href=https://uops.info>μops.info</a> and look at their interactive
+<a href=https://uops.info/table.html>table</a>.</span></blockquote><p>We can see that the vector code achieves peak throughput for small
+vectors, but not large ones. Let us try and understand why.</p><p>Remember that as well as thinking about the <a href=https://teaching.wence.uk/comp52315/notes/introduction/#resource-bottleneck-instruction-throughput>primary resource</a> of
+instruction throughput, we also need to consider whether <a href=https://teaching.wence.uk/comp52315/notes/introduction/#resource-bottleneck-data-transfers>data
+transfers</a> are
+producing the bottleneck. For this, we need to consider the memory
+hierarchy.</p><h2 id=memory-hierarchy>Memory hierarchy
+<a class=anchor href=#memory-hierarchy>#</a></h2><p>In the von Neumann model, program code and data must be transferred
+from memory to the CPU (and back again). To speed up computation we can
+increase the speed at which instructions execute. We can also reduce
+the time it takes to <em>move</em> data between the memory and the CPU.</p><p>In an ideal world, to process lots of data very fast, we would have
+<em>large</em> (in terms of storage) and <em>fast</em> (in terms of transfer speed)
+memory. Unfortunately, physics gets in the way, and we can pick one of</p><ol><li><em>small</em> and <em>fast</em></li><li><em>large</em> and <em>slow</em></li></ol><p>In fact, there is a sliding scale here, as we make the storage
+capacity smaller we can make the memory faster, and vice versa.</p><p>We have something close to the following picture</p><figure style=width:70%><img class=scaled src=https://teaching.wence.uk/comp52315/images/manual/cachesketch.svg alt="As memory gets larger, it must become slower, both in latency and bandwidth"><figcaption><p>As memory gets larger, it must become slower, both in latency and bandwidth</p></figcaption></figure><p>Typical CPUs have three or more levels of cache that get both larger
+and slower as we get closer to main memory (and further in latency
+from the CPU). So we&rsquo;ll often refer to L1 or L2 cache (or similar).</p><blockquote class="book-hint info"><span>To explore these latencies in more depth (and see how they&rsquo;ve changed
+over time), see <a href=https://colin-scott.github.io/personal_website/research/interactive_latency.html>latency numbers every programmer should
+know</a>.</span></blockquote><h2 id=caches>Caches
+<a class=anchor href=#caches>#</a></h2><p>Having identified the high level problem that we can&rsquo;t make large,
+fast memory, what can chip designers do about it? The answer (on CPUs
+at least) is <em>caches</em>. As usual, wikipedia has a pretty <a href=https://en.wikipedia.org/wiki/CPU_cache>detailed
+description</a>, we&rsquo;ll cover the
+main points here.</p><p>The idea is that we add a hierarchy of small, fast memory. These keep
+a copy of <em>frequently used</em> data and are used to speed up access.
+Except in certain special cases, it&rsquo;s not possible to know <em>which</em>
+data will be used frequently. As a consequence, caches rely on a
+<em>principle of locality</em>.</p><p>As an analogy, consider implementing an algorithm from a textbook. You have
+the textbook on the shelf, but the first time you go to find something
+you need to get the book, search its index, flip to the correct page
+and start reading. Now, you think you understand, so you put the
+textbook away again on the shelf. Then you carry on with your
+implementation and realise you need to refer to the next page in the
+book, so you go back to the shelf, grab the book, flip to the correct
+page and reacquaint yourself with notation and continue working. This
+is slow. A more efficient thing to do would be to leave the textbook
+on your desk until you&rsquo;re definitely finished with it (or your desk
+becomes full and you need space for another one). In analogy with
+memory accesses, this is exactly what caches enable: fast lookup to
+frequently used information.</p><h3 id=principle-of-locality>Principle of locality
+<a class=anchor href=#principle-of-locality>#</a></h3><p>It is normally not possible to decide before execution exactly which
+data will be needed frequently (and is therefore suitable for
+caching). In practice, most programs either do (or could) exhibit
+<em>locality</em> of data access. If we want our code to run fast, then we
+need to restructure any algorithm to make best use of this locality.</p><p>There are two types of locality that caches exploit</p><h4 id=temporal-locality>Temporal locality
+<a class=anchor href=#temporal-locality>#</a></h4><p>This can be summarised pithily as:</p><blockquote class="book-hint info"><span>If I access data at some memory address, it is likely that I will do
+so again &ldquo;soon&rdquo;.</span></blockquote><p>The idea is that the first time we access an address, it is loaded
+from main memory <em>and</em> stored in the cache. We pay a small penalty
+for the first load (because the store to cache is not completely
+free), but subsequent accesses to that address use the copy in the
+cache and are much faster.</p><p>As an example, consider a simple loop</p><div class=highlight><pre style=color:#272822;background-color:#fafafa><code class=language-c data-lang=c><span style=color:#00a8c8>float</span> <span style=color:#111>s</span><span style=color:#111>[</span><span style=color:#ae81ff>16</span><span style=color:#111>]</span> <span style=color:#f92672>=</span> <span style=color:#111>{</span><span style=color:#ae81ff>0</span><span style=color:#111>};</span>
+<span style=color:#00a8c8>for</span> <span style=color:#111>(</span><span style=color:#00a8c8>int</span> <span style=color:#111>i</span> <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span><span style=color:#111>;</span> <span style=color:#111>i</span> <span style=color:#f92672>&lt;</span> <span style=color:#111>N</span><span style=color:#111>;</span> <span style=color:#111>i</span><span style=color:#f92672>++</span><span style=color:#111>)</span> <span style=color:#111>{</span>
+  <span style=color:#111>s</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#f92672>%</span><span style=color:#ae81ff>16</span><span style=color:#111>]</span> <span style=color:#f92672>+=</span> <span style=color:#111>a</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>];</span>
+<span style=color:#111>}</span>
+</code></pre></div><p>where $N \gg 16$. In this case, each entry in <code>s</code> will be accessed
+multiple times, exhibiting <em>temporal locality</em>, and it makes sense to
+keep all of <code>s</code> in cache.</p><h4 id=spatial-locality>Spatial locality
+<a class=anchor href=#spatial-locality>#</a></h4><p>Pithily summarised as</p><blockquote class="book-hint info"><span>If I access data at some memory address, it is likely that I will
+access neighbouring memory addresses.</span></blockquote><p>Again, when accessing an address for the first time, we load it from
+main memory <em>and</em> store it in the cache. Additionally, we guess (or
+hope) that neighbouring addresses will also be used. So if we loaded
+an address <code>a</code>, we also load and store the data at addresses <code>a+1</code>,
+<code>a+2</code> (say). We pay a penalty for the first load (because we&rsquo;re moving
+more data), but hope that the next load is for <code>a+1</code> which will be
+fast.</p><p>Consider the same loop again.</p><div class=highlight><pre style=color:#272822;background-color:#fafafa><code class=language-c data-lang=c><span style=color:#00a8c8>float</span> <span style=color:#111>s</span><span style=color:#111>[</span><span style=color:#ae81ff>16</span><span style=color:#111>]</span> <span style=color:#f92672>=</span> <span style=color:#111>{</span><span style=color:#ae81ff>0</span><span style=color:#111>};</span>
+<span style=color:#00a8c8>for</span> <span style=color:#111>(</span><span style=color:#00a8c8>int</span> <span style=color:#111>i</span> <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span><span style=color:#111>;</span> <span style=color:#111>i</span> <span style=color:#f92672>&lt;</span> <span style=color:#111>N</span><span style=color:#111>;</span> <span style=color:#111>i</span><span style=color:#f92672>++</span><span style=color:#111>)</span> <span style=color:#111>{</span>
+  <span style=color:#111>s</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#f92672>%</span><span style=color:#ae81ff>16</span><span style=color:#111>]</span> <span style=color:#f92672>+=</span> <span style=color:#111>a</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>];</span>
+<span style=color:#111>}</span>
+</code></pre></div><p>Access to <code>a</code> exhibits spatial locality. It makes sense when loading
+<code>a[i]</code> to also load <code>a[i+1]</code> since it will be used in the next
+iteration.</p><h3 id=high-level-design-of-caches>High-level design of caches
+<a class=anchor href=#high-level-design-of-caches>#</a></h3><p>To understand how to write software that deals with caches
+efficiently, it is helpful to understand a little of how they work in
+hardware.</p><p>Each piece of data in our program is uniquely identifiable by its
+<em>address</em> in memory. This is a 32 or (these days usually) 64bit
+value which refers to a single byte in memory.</p><p>Let&rsquo;s look at this. In C we can use the <code>%p</code> format specifier to print
+the address of a pointer in hexadecimal. We can also, with a bit of
+trickery, print it in binary.</p><div class=book-include><div class=book-include-heading><tt>snippets/print-address.c</tt></div><div class=book-include-download><a href=https://teaching.wence.uk/comp52315/code/snippets/print-address.c>Download</a></div><div class=book-include-content><div class=highlight><pre style=color:#272822;background-color:#fafafa><code class=language-c data-lang=c><span style=color:#75715e>#include</span> <span style=color:#75715e>&lt;stdlib.h&gt;</span><span style=color:#75715e>
+</span><span style=color:#75715e>#include</span> <span style=color:#75715e>&lt;stdio.h&gt;</span><span style=color:#75715e>
+</span><span style=color:#75715e>#include</span> <span style=color:#75715e>&lt;stdint.h&gt;</span><span style=color:#75715e>
+</span><span style=color:#75715e>#include</span> <span style=color:#75715e>&lt;limits.h&gt;</span><span style=color:#75715e>
+</span><span style=color:#75715e></span>
+<span style=color:#00a8c8>static</span> <span style=color:#00a8c8>char</span> <span style=color:#f92672>*</span><span style=color:#75af00>format_binary</span><span style=color:#111>(</span><span style=color:#111>uintptr_t</span> <span style=color:#111>x</span><span style=color:#111>,</span> <span style=color:#00a8c8>char</span> <span style=color:#f92672>*</span><span style=color:#111>b</span><span style=color:#111>)</span>
+<span style=color:#111>{</span>
+  <span style=color:#75715e>/* Assumes little-endian */</span>
+  <span style=color:#00a8c8>const</span> <span style=color:#00a8c8>unsigned</span> <span style=color:#111>nbits</span> <span style=color:#f92672>=</span> <span style=color:#00a8c8>sizeof</span><span style=color:#111>(</span><span style=color:#111>uintptr_t</span><span style=color:#111>)</span><span style=color:#f92672>*</span><span style=color:#111>CHAR_BIT</span><span style=color:#111>;</span>
+  <span style=color:#00a8c8>const</span> <span style=color:#00a8c8>unsigned</span> <span style=color:#111>nseps</span> <span style=color:#f92672>=</span> <span style=color:#111>nbits</span> <span style=color:#f92672>/</span> <span style=color:#ae81ff>8</span><span style=color:#111>;</span>
+  <span style=color:#111>b</span> <span style=color:#f92672>+=</span> <span style=color:#111>nbits</span> <span style=color:#f92672>+</span> <span style=color:#111>nseps</span> <span style=color:#f92672>-</span> <span style=color:#ae81ff>1</span><span style=color:#111>;</span>
+  <span style=color:#f92672>*</span><span style=color:#111>b</span> <span style=color:#f92672>=</span> <span style=color:#d88200>&#39;\0&#39;</span><span style=color:#111>;</span>
+  <span style=color:#00a8c8>for</span> <span style=color:#111>(</span><span style=color:#00a8c8>int</span> <span style=color:#111>z</span> <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span><span style=color:#111>;</span> <span style=color:#111>z</span> <span style=color:#f92672>&lt;</span> <span style=color:#111>nbits</span><span style=color:#111>;</span> <span style=color:#111>z</span><span style=color:#f92672>++</span><span style=color:#111>)</span> <span style=color:#111>{</span>
+    <span style=color:#00a8c8>if</span> <span style=color:#111>(</span><span style=color:#111>z</span> <span style=color:#f92672>&amp;&amp;</span> <span style=color:#f92672>!</span><span style=color:#111>(</span><span style=color:#111>z</span> <span style=color:#f92672>%</span> <span style=color:#ae81ff>8</span><span style=color:#111>))</span> <span style=color:#111>{</span>
+      <span style=color:#f92672>*</span><span style=color:#111>(</span><span style=color:#f92672>--</span><span style=color:#111>b</span><span style=color:#111>)</span> <span style=color:#f92672>=</span> <span style=color:#d88200>&#39;_&#39;</span><span style=color:#111>;</span>
+    <span style=color:#111>}</span>
+    <span style=color:#f92672>*</span><span style=color:#111>(</span><span style=color:#f92672>--</span><span style=color:#111>b</span><span style=color:#111>)</span> <span style=color:#f92672>=</span> <span style=color:#d88200>&#39;0&#39;</span> <span style=color:#f92672>+</span> <span style=color:#111>((</span><span style=color:#111>x</span><span style=color:#f92672>&gt;&gt;</span><span style=color:#111>z</span><span style=color:#111>)</span> <span style=color:#f92672>&amp;</span> <span style=color:#ae81ff>0x1</span><span style=color:#111>);</span>
+  <span style=color:#111>}</span>
+  <span style=color:#00a8c8>return</span> <span style=color:#111>b</span><span style=color:#111>;</span>
+<span style=color:#111>}</span>
+
+<span style=color:#00a8c8>int</span> <span style=color:#75af00>main</span><span style=color:#111>(</span><span style=color:#00a8c8>int</span> <span style=color:#111>argc</span><span style=color:#111>,</span> <span style=color:#00a8c8>char</span> <span style=color:#f92672>**</span><span style=color:#111>argv</span><span style=color:#111>)</span>
+<span style=color:#111>{</span>
+  <span style=color:#00a8c8>int</span> <span style=color:#111>a</span> <span style=color:#f92672>=</span> <span style=color:#ae81ff>1</span><span style=color:#111>;</span>
+  <span style=color:#00a8c8>double</span> <span style=color:#f92672>*</span><span style=color:#111>b</span> <span style=color:#f92672>=</span> <span style=color:#111>malloc</span><span style=color:#111>(</span><span style=color:#ae81ff>4</span><span style=color:#f92672>*</span><span style=color:#00a8c8>sizeof</span><span style=color:#111>(</span><span style=color:#f92672>*</span><span style=color:#111>b</span><span style=color:#111>));</span>
+  <span style=color:#00a8c8>int</span> <span style=color:#f92672>*</span><span style=color:#111>c</span> <span style=color:#f92672>=</span> <span style=color:#111>malloc</span><span style=color:#111>(</span><span style=color:#ae81ff>4</span><span style=color:#f92672>*</span><span style=color:#00a8c8>sizeof</span><span style=color:#111>(</span><span style=color:#f92672>*</span><span style=color:#111>c</span><span style=color:#111>));</span>
+  <span style=color:#00a8c8>char</span> <span style=color:#111>buf</span><span style=color:#111>[</span><span style=color:#00a8c8>sizeof</span><span style=color:#111>(</span><span style=color:#111>uintptr_t</span><span style=color:#111>)</span><span style=color:#f92672>*</span><span style=color:#111>CHAR_BIT</span> <span style=color:#f92672>+</span> <span style=color:#111>(</span><span style=color:#00a8c8>sizeof</span><span style=color:#111>(</span><span style=color:#111>uintptr_t</span><span style=color:#111>)</span><span style=color:#f92672>*</span><span style=color:#111>CHAR_BIT</span><span style=color:#111>)</span><span style=color:#f92672>/</span><span style=color:#ae81ff>8</span><span style=color:#111>];</span>
+
+  <span style=color:#111>printf</span><span style=color:#111>(</span><span style=color:#d88200>&#34;Address of a    is: %p %s</span><span style=color:#8045ff>\n</span><span style=color:#d88200>&#34;</span><span style=color:#111>,</span> <span style=color:#f92672>&amp;</span><span style=color:#111>a</span><span style=color:#111>,</span>
+         <span style=color:#111>format_binary</span><span style=color:#111>((</span><span style=color:#111>uintptr_t</span><span style=color:#111>)</span><span style=color:#f92672>&amp;</span><span style=color:#111>a</span><span style=color:#111>,</span> <span style=color:#111>buf</span><span style=color:#111>));</span>
+  <span style=color:#111>printf</span><span style=color:#111>(</span><span style=color:#d88200>&#34;</span><span style=color:#8045ff>\n</span><span style=color:#d88200>&#34;</span><span style=color:#111>);</span>
+  <span style=color:#00a8c8>for</span> <span style=color:#111>(</span><span style=color:#00a8c8>int</span> <span style=color:#111>i</span> <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span><span style=color:#111>;</span> <span style=color:#111>i</span> <span style=color:#f92672>&lt;</span> <span style=color:#ae81ff>4</span><span style=color:#111>;</span> <span style=color:#111>i</span><span style=color:#f92672>++</span><span style=color:#111>)</span> <span style=color:#111>{</span>
+    <span style=color:#111>printf</span><span style=color:#111>(</span><span style=color:#d88200>&#34;Address of b[%d] is: %p %s</span><span style=color:#8045ff>\n</span><span style=color:#d88200>&#34;</span><span style=color:#111>,</span> <span style=color:#111>i</span><span style=color:#111>,</span> <span style=color:#f92672>&amp;</span><span style=color:#111>b</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>],</span>
+           <span style=color:#111>format_binary</span><span style=color:#111>((</span><span style=color:#111>uintptr_t</span><span style=color:#111>)</span><span style=color:#f92672>&amp;</span><span style=color:#111>b</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>],</span> <span style=color:#111>buf</span><span style=color:#111>));</span>
+  <span style=color:#111>}</span>
+  <span style=color:#111>printf</span><span style=color:#111>(</span><span style=color:#d88200>&#34;</span><span style=color:#8045ff>\n</span><span style=color:#d88200>&#34;</span><span style=color:#111>);</span>
+  <span style=color:#00a8c8>for</span> <span style=color:#111>(</span><span style=color:#00a8c8>int</span> <span style=color:#111>i</span> <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span><span style=color:#111>;</span> <span style=color:#111>i</span> <span style=color:#f92672>&lt;</span> <span style=color:#ae81ff>4</span><span style=color:#111>;</span> <span style=color:#111>i</span><span style=color:#f92672>++</span><span style=color:#111>)</span> <span style=color:#111>{</span>
+    <span style=color:#111>format_binary</span><span style=color:#111>((</span><span style=color:#111>uintptr_t</span><span style=color:#111>)</span><span style=color:#f92672>&amp;</span><span style=color:#111>c</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>],</span> <span style=color:#111>buf</span><span style=color:#111>);</span>
+    <span style=color:#111>printf</span><span style=color:#111>(</span><span style=color:#d88200>&#34;Address of c[%d] is: %p %s</span><span style=color:#8045ff>\n</span><span style=color:#d88200>&#34;</span><span style=color:#111>,</span> <span style=color:#111>i</span><span style=color:#111>,</span> <span style=color:#f92672>&amp;</span><span style=color:#111>c</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>],</span>
+           <span style=color:#111>format_binary</span><span style=color:#111>((</span><span style=color:#111>uintptr_t</span><span style=color:#111>)</span><span style=color:#f92672>&amp;</span><span style=color:#111>c</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>],</span> <span style=color:#111>buf</span><span style=color:#111>));</span>
+  <span style=color:#111>}</span>
+  <span style=color:#111>free</span><span style=color:#111>(</span><span style=color:#111>b</span><span style=color:#111>);</span>
+  <span style=color:#00a8c8>return</span> <span style=color:#ae81ff>0</span><span style=color:#111>;</span>
+<span style=color:#111>}</span>
+</code></pre></div></div></div><p>Compile and run it with</p><pre><code>$ cc -o print-address print-address.c
+$ ./print-address
+Address of a    is: 0x7ffee015022c 00000000_00000000_01111111_11111110_11100000_00010101_00000010_00101100
+
+Address of b[0] is: 0x7fa6e0405820 00000000_00000000_01111111_10100110_11100000_01000000_01011000_00100000
+Address of b[1] is: 0x7fa6e0405828 00000000_00000000_01111111_10100110_11100000_01000000_01011000_00101000
+Address of b[2] is: 0x7fa6e0405830 00000000_00000000_01111111_10100110_11100000_01000000_01011000_00110000
+Address of b[3] is: 0x7fa6e0405838 00000000_00000000_01111111_10100110_11100000_01000000_01011000_00111000
+
+Address of c[0] is: 0x7fa6e0405840 00000000_00000000_01111111_10100110_11100000_01000000_01011000_01000000
+Address of c[1] is: 0x7fa6e0405844 00000000_00000000_01111111_10100110_11100000_01000000_01011000_01000100
+Address of c[2] is: 0x7fa6e0405848 00000000_00000000_01111111_10100110_11100000_01000000_01011000_01001000
+Address of c[3] is: 0x7fa6e040584c 00000000_00000000_01111111_10100110_11100000_01000000_01011000_01001100
+</code></pre><p>You may get different values.</p><p>We see that each array has values with contiguous addresses. In
+building our cache, we need to decide how to store a value at a given
+address in our cache.</p><p>The simplest form of cache is a <em>direct-mapped</em> cache (more
+complicated caches are built out of these). Suppose it can store $2^N$
+bytes of data. We divide it into blocks, each of $2^M$ bytes ($M &lt;
+N$). Each address references one byte, so we need to use $N$ <em>bits</em> of
+the address to select which slot in the cache to use. A picture can
+help</p><figure style=width:70%><img class=scaled src=https://teaching.wence.uk/comp52315/images/manual/cache-layout.svg alt="Schematic of a cache with block size $2^M$ and capacity $2^N$"><figcaption><p>Schematic of a cache with block size $2^M$ and capacity $2^N$</p></figcaption></figure><p>We reserve the lowest $N$ bits of the address (the rightmost) to
+compute a 2D cache location. Each address is mapped into one of the
+$2^{N-M}$ <em>blocks</em>. The correct byte is located with the lowest $M$
+bits. Finally the high bits of the address are used as a key.</p><p>Data are loaded into the cache one <em>block</em> at a time (these are also
+called <em>cache lines</em>). So if we access an address that access byte 4 of
+block 2 (say), then we load data from an address that lives at byte 0
+of block 2 up to byte $2^M$.</p><figure style=width:70%><img class=scaled src=https://teaching.wence.uk/comp52315/images/manual/cache-line-load.svg alt="Data are loaded in full cache lines, even when we only request a single byte."><figcaption><p>Data are loaded in full cache lines, even when we only request a single byte.</p></figcaption></figure><p>By loading data in cache lines, we immediately exploit <em>spatial
+locality</em>. The optimal size of the block is a function of the total
+cache size and the particular data access patterns. So almost all CPUs
+have arrived at the same tradeoff of using a 64 Byte cache line.</p><blockquote class="book-hint info"><span>A consequence of this loading strategy is that <em>cache-friendly</em>
+algorithms work on cache line sized chunks of data at a time. That is,
+we should endeavour, when loading data, to use the entire cache line.</span></blockquote><h4 id=eviction-from-caches>Eviction from caches
+<a class=anchor href=#eviction-from-caches>#</a></h4><p>Recall that our cache is much <em>smaller</em> than the total size of main
+memory. So it is possible that we will want to load more data than fit
+in a cache. If two different addresses have the same low bit pattern,
+they will be mapped to the same location in the cache. We only have
+space to store one of them, so we have a <em>conflict</em>.</p><p>Since the more recently requested data is required <em>now</em>, our
+resolution is to <em>evict</em> the older data and replace it with the new
+address (this is an LRU (least recently used) eviction policy).</p><p>Let&rsquo;s think about what can go wrong with this policy. Consider a
+simple example where we perform the following loop.</p><div class=highlight><pre style=color:#272822;background-color:#fafafa><code class=language-c data-lang=c><span style=color:#00a8c8>int</span> <span style=color:#111>a</span><span style=color:#111>[</span><span style=color:#ae81ff>64</span><span style=color:#111>];</span>
+<span style=color:#00a8c8>int</span> <span style=color:#111>b</span><span style=color:#111>[</span><span style=color:#ae81ff>64</span><span style=color:#111>];</span>
+<span style=color:#00a8c8>int</span> <span style=color:#111>r</span> <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span><span style=color:#111>;</span>
+<span style=color:#00a8c8>for</span> <span style=color:#111>(</span><span style=color:#00a8c8>int</span> <span style=color:#111>i</span> <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span><span style=color:#111>;</span> <span style=color:#111>i</span> <span style=color:#f92672>&lt;</span> <span style=color:#ae81ff>100</span><span style=color:#111>;</span> <span style=color:#111>i</span><span style=color:#f92672>++</span><span style=color:#111>)</span> <span style=color:#111>{</span>
+  <span style=color:#00a8c8>for</span> <span style=color:#111>(</span><span style=color:#00a8c8>int</span> <span style=color:#111>j</span> <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span><span style=color:#111>;</span> <span style=color:#111>j</span> <span style=color:#f92672>&lt;</span> <span style=color:#ae81ff>64</span><span style=color:#111>;</span> <span style=color:#111>j</span><span style=color:#f92672>++</span><span style=color:#111>)</span> <span style=color:#111>{</span>
+    <span style=color:#111>r</span> <span style=color:#f92672>+=</span> <span style=color:#111>a</span><span style=color:#111>[</span><span style=color:#111>j</span><span style=color:#111>]</span> <span style=color:#f92672>+</span> <span style=color:#111>b</span><span style=color:#111>[</span><span style=color:#111>j</span><span style=color:#111>];</span>
+  <span style=color:#111>}</span>
+<span style=color:#111>}</span>
+</code></pre></div><p>Let&rsquo;s imagine executing this on a system where each <code>int</code> requires
+four bytes and we have a single direct-mapped cache with total size
+1KB and a 32 byte cache line. So we have $N = 10$ and $M=5$ and there
+are 32 lines in the cache.</p><p>Each cache line therefore holds eight <code>int</code>s, and we need eight cache
+lines for <code>a</code> and eight cache lines for <code>b</code>. This is 16 total lines
+which is less than the cache size (so everything should be fine?).</p><p>A problem occurs if entries in <code>a</code> and <code>b</code> map to the <em>same</em> cache
+lines. In this circumstance, an entry from <code>a</code> will be loaded, filling
+a line, then an entry from <code>b</code> will be loaded, filling the same line
+and evicting <code>a</code>. Then we move to the next iteration where we load
+<code>a</code>, evicting <code>b</code> and so forth.</p><p>In the worst case, <code>a</code> and <code>b</code> map to exactly the same lines and we
+reduce the <em>effective</em> size of a cache from 1KB to 32bytes.</p><p>This phenomenon is known as <em>cache thrashing</em>, there&rsquo;s a nice worked
+example
+<a href=https://cs233.github.io/thrashingandassociativityexample.html>here</a>,
+that page also has some other <a href=https://cs233.github.io/otherresources.html>worked
+examples</a> on mapping
+arrays into caches.</p><p>To avoid mitigate against this problem, actual CPUs normally have
+slightly more complicated caches. Typically they use $k$-way set
+associative caches.</p><p>A $k$-way set associative cache behave like k &ldquo;copies&rdquo; of a direct
+mapped cache. Each block of main memory can map to one of $k$ cache
+lines, which are termed <em>sets</em>. Usually, hardware designers choose $k
+\in \{2, 4, 8, 16\}$. For example, <a href=https://en.wikichip.org/wiki/intel/microarchitectures/skylake_%28server%29#Memory_Hierarchy>Intel Skylake chips</a> have $k = 8$
+for level 1 caches, $k = 16$ for level 2, and $k = 11$ for level 3.</p><p>A $k$-way cache, can handle up to $k$ different addresses mapping to
+the same cache location without a reduction in the perceived size of
+the cache. This comes at a cost of increased complexity in
+the chip design, and marginally increased latency: looking up and
+loading data from a direct-mapped cache is slightly faster than
+looking it up in a $k$-way cache.</p><p>However, they are not a silver bullet, as soon as we are handling more
+than $k$ addresses that might map to the same location, we have the
+same eviction problem.</p><h3 id=programming-cache-friendly-algorithms>Programming cache friendly algorithms
+<a class=anchor href=#programming-cache-friendly-algorithms>#</a></h3><p>To mitigate against some of these effects, if we know that the data
+we&rsquo;ll be working on should fit in cache it is sometimes beneficial to
+explicitly copy it into an appropriate sized buffer and then work on
+the buffer. We will see an example of this in <a href=https://teaching.wence.uk/comp52315/exercises/exercise08/>exercise 8</a>.</p><h2 id=measurement-of-cache-bandwidth>Measurement of cache bandwidth
+<a class=anchor href=#measurement-of-cache-bandwidth>#</a></h2><p>As well as providing lower latency data access, caches also provide
+larger memory bandwidth (the rate at which data can be fetched from
+the cache to the CPU).</p><p>We can use
+<a href=https://github.com/RRZE-HPC/likwid/wiki/Likwid-Bench>likwid-bench</a>
+to measure memory bandwidth. In <a href=https://teaching.wence.uk/comp52315/exercises/exercise02/>exercise 2</a> you should do this to determine the cache and main memory
+bandwidth on the Hamilton cores. We will use this to construct a
+predictive model of the floating point throughput of the reduction
+from <a href=https://teaching.wence.uk/comp52315/exercises/exercise01/>exercise 1</a>.</p><blockquote class=exercise><h3>Exercise</h3><span>Now is a good time to attempt <a href=https://teaching.wence.uk/comp52315/exercises/exercise02/>exercise 2</a>.</span></blockquote><p>FIXME: add results</p><h2 id=a-predictive-model-for-reductions>A predictive model for reductions
+<a class=anchor href=#a-predictive-model-for-reductions>#</a></h2><p>Let us remind ourselves of the code we want to predict the performance
+of</p><div class="book-columns flex flex-wrap"><div class="flex-even markdown-inner"><h4 id=c-code>C code</h4><div class=highlight><pre style=color:#272822;background-color:#fafafa><code class=language-c data-lang=c><span style=color:#00a8c8>float</span> <span style=color:#75af00>reduce</span><span style=color:#111>(</span><span style=color:#00a8c8>int</span> <span style=color:#111>N</span><span style=color:#111>,</span> 
+             <span style=color:#00a8c8>const</span> <span style=color:#00a8c8>double</span> <span style=color:#f92672>*</span><span style=color:#00a8c8>restrict</span> <span style=color:#111>a</span><span style=color:#111>)</span>
+<span style=color:#111>{</span>
+  <span style=color:#00a8c8>float</span> <span style=color:#111>c</span> <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span><span style=color:#111>;</span>
+  <span style=color:#00a8c8>for</span> <span style=color:#111>(</span><span style=color:#00a8c8>int</span> <span style=color:#111>i</span> <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span><span style=color:#111>;</span> <span style=color:#111>i</span> <span style=color:#f92672>&lt;</span> <span style=color:#111>N</span><span style=color:#111>;</span> <span style=color:#111>i</span><span style=color:#f92672>++</span><span style=color:#111>)</span>
+    <span style=color:#111>c</span> <span style=color:#f92672>+=</span> <span style=color:#111>a</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>];</span>
+  <span style=color:#00a8c8>return</span> <span style=color:#111>c</span><span style=color:#111>;</span>
+<span style=color:#111>}</span>
+</code></pre></div></div><div class="flex-even markdown-inner"><h4 id=vectorised-pseudo-assembly>Vectorised pseudo-assembly</h4><pre><code>LOAD [r1.0, ..., r1.7] ← 0
+i ← 0
+loop:
+  LOAD [r2.0, ..., r2.7] ← [a[i], ..., a[i+7]]
+  ADD r1 ← r1 + r2 ; SIMD ADD
+  i ← i + 8
+  if i &lt; N: loop
+result ← r1.0 + r1.1 + ... + r1.7
+</code></pre></div></div><p>The accumulation parameter <code>c</code> is held in a register. At each
+iteration of the vectorised loop, we load eight elements of <code>a</code> into a
+second register. Since each <code>float</code> value takes 4 bytes, this means
+that each iteration of the loop requires 32 bytes of data.</p><blockquote class="book-hint info"><span><p>If you don&rsquo;t know the size (in bytes) of C datatypes off the top of
+your head, you can always determine them by writing some C code to
+print them out using
+<a href=https://en.cppreference.com/w/c/language/sizeof>sizeof</a>:</p><div class=highlight><pre style=color:#272822;background-color:#fafafa><code class=language-c data-lang=c><span style=color:#75715e>#include</span> <span style=color:#75715e>&lt;stdio.h&gt;</span><span style=color:#75715e>
+</span><span style=color:#75715e></span><span style=color:#00a8c8>int</span> <span style=color:#75af00>main</span><span style=color:#111>(</span><span style=color:#00a8c8>void</span><span style=color:#111>)</span>
+<span style=color:#111>{</span>
+  <span style=color:#111>printf</span><span style=color:#111>(</span><span style=color:#d88200>&#34;Size of float: %lu</span><span style=color:#8045ff>\n</span><span style=color:#d88200>&#34;</span><span style=color:#111>,</span> <span style=color:#00a8c8>sizeof</span><span style=color:#111>(</span><span style=color:#00a8c8>float</span><span style=color:#111>));</span>
+<span style=color:#111>}</span>
+</code></pre></div><details><summary>Size in bits</summary><div class=markdown-inner>If we want to know how many bits there are in a byte, we should
+technically check the value of the macro <code>CHAR_BIT</code> (defined in
+<code>&lt;limits.h></code>). On all systems you are likely to encounter, it is 8.
+See <a href=https://en.cppreference.com/w/c/language/sizeof>CPP reference on
+sizeof</a> for more
+information.</div></details></span></blockquote><p>Recall that we can run one <code>ADD</code> per cycle. To keep up with the
+addition, the memory movement must therefore deliver 32 bytes/cycle.</p><p>At 2.9GHz, this translates to a sustained load bandwidth of</p><p>$$
+32 \text{bytes/cycle} \times 2.9 \times 10^9 \text{cycle/s} = 92.8\text{Gbyte/s}.
+$$</p><p>Let&rsquo;s match this up with our measurements.</p><h3 id=l1-bandwidth>L1 bandwidth
+<a class=anchor href=#l1-bandwidth>#</a></h3><p>The smallest (and fastest) cache is the level one (or L1) cache. On
+this hardware, we observe a sustained load bandwidth of around
+300Gbyte/s. Hence, when the data fit in L1 (less than 32KB), the speed
+of executing the <code>ADD</code> instruction is the limit.</p><h3 id=l2-bandwidth>L2 bandwidth
+<a class=anchor href=#l2-bandwidth>#</a></h3><p>The next level of cache is level two (L2). This provides around
+80Gbyte/s or 27bytes/cycle. Since \( 27 &lt; 32 \), we can&rsquo;t reach the
+floating point peak when the data fit in L2. The best we can hope for
+is</p><p>$$
+2.9 \times 8 \times \frac{27}{32} = 19.6\text{GFlops/s}.
+$$</p><h3 id=l3-and-main-memory-bandwidth>L3 and main memory bandwidth
+<a class=anchor href=#l3-and-main-memory-bandwidth>#</a></h3><p>We apply the same idea to the level three (L3) cache and main memory.
+L3 provides around 36Gbyte/s or 12bytes/cycle. We obtain an upper
+limit of</p><p>$$
+2.9 \times 8 \times \frac{12}{32} = 8.7\text{GFlops/s}
+$$</p><p>For main memory, the memory bandwidth is around 13Gbyte/s or
+4.5bytes/cycle, and the peak is approximately 3.25GFlops/s.</p><p>Let&rsquo;s redraw our floating point throughput graph, this time annotating
+it with these predicted performance limits.</p><figure style=width:60%><img class=scaled src=https://teaching.wence.uk/comp52315/images/auto/sum-reduction-throughput-annotated.svg alt="AVX-enabled throughput of sum reduction as measured with likwid-bench. Annotated with simple performance limits from our measurements of cache bandwidth."><figcaption><p>AVX-enabled throughput of sum reduction as measured with <code>likwid-bench</code>. Annotated with simple performance limits from our measurements of cache bandwidth.</p></figcaption></figure><p>We can see that this simple model does a pretty good job of predicting
+the performance of our test code.</p><h2 id=stepping-back>Stepping back
+<a class=anchor href=#stepping-back>#</a></h2><p>This idea of predicting performance based on resource limits is a
+powerful one, and we will return to it through the rest of the course.</p><blockquote class=exercise><h3>Exercise</h3><span><p>As a practice, see if you can come up with throughput limits for the
+following piece of code</p><div class=highlight><pre style=color:#272822;background-color:#fafafa><code class=language-c data-lang=c><span style=color:#00a8c8>void</span> <span style=color:#75af00>stream_triad</span><span style=color:#111>(</span><span style=color:#00a8c8>int</span> <span style=color:#111>N</span><span style=color:#111>,</span> <span style=color:#00a8c8>float</span> <span style=color:#f92672>*</span> <span style=color:#00a8c8>restrict</span> <span style=color:#111>a</span><span style=color:#111>,</span>
+                  <span style=color:#00a8c8>const</span> <span style=color:#00a8c8>float</span> <span style=color:#f92672>*</span> <span style=color:#00a8c8>restrict</span> <span style=color:#111>b</span><span style=color:#111>,</span>
+                  <span style=color:#00a8c8>const</span> <span style=color:#00a8c8>float</span> <span style=color:#f92672>*</span> <span style=color:#00a8c8>restrict</span> <span style=color:#111>c</span><span style=color:#111>,</span>
+                  <span style=color:#00a8c8>const</span> <span style=color:#00a8c8>float</span> <span style=color:#111>alpha</span><span style=color:#111>)</span>
+<span style=color:#111>{</span>
+  <span style=color:#00a8c8>for</span> <span style=color:#111>(</span><span style=color:#00a8c8>int</span> <span style=color:#111>i</span> <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span><span style=color:#111>;</span> <span style=color:#111>i</span> <span style=color:#f92672>&lt;</span> <span style=color:#111>N</span><span style=color:#111>;</span> <span style=color:#111>i</span><span style=color:#f92672>++</span><span style=color:#111>)</span>
+    <span style=color:#111>a</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>]</span> <span style=color:#f92672>=</span> <span style=color:#111>b</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>]</span><span style=color:#f92672>*</span><span style=color:#111>alpha</span> <span style=color:#f92672>+</span> <span style=color:#111>c</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>];</span>
+<span style=color:#111>}</span>
+</code></pre></div><p>The Broadwell chips on Hamilton can execute up to two loads and one
+store per cycle. To determine the floating point limit (assuming no
+memory constraints) note that this operation perfectly matches a
+&ldquo;fused multiply add&rdquo;</p><pre><code>a_i ← b_i * alpha + c_i
+</code></pre><p>Which is implemented as a single instruction <code>FMA</code>. Broadwell chips
+can execute up to two <code>FMA</code> instructions per cycle.</p></span></blockquote><p>We will revisit this in a <a href=https://teaching.wence.uk/comp52315/exercises/exercise05/>later exercise</a>.</p><h2 id=scalable-and-saturating-resources>Scalable and saturating resources
+<a class=anchor href=#scalable-and-saturating-resources>#</a></h2><p>Although most of the focus in this course is on single core
+performance, it is worthwhile taking a little time to consider how
+resource use changes when we involve more cores. All modern chips have
+more than one core on them. Some of the resources on a chip are
+therefore private to each core, and some are shared. In particular,
+the floating point units are private: adding more cores increasing the
+total floating point throughput. In contrast, the main memory is
+shared between cores, so adding more cores <em>does not</em> increase the
+memory bandwidth.</p><p>We can ask likwid, using
+<a href=https://github.com/RRZE-HPC/likwid/wiki/likwid-topology><code>likwid-topology</code></a>
+to provide us some information on the layout of the system we are
+running on. It produces a schematic of the core and memory layout in
+ASCII, similar to the diagram below</p><figure style=width:70%><img class=scaled src=https://teaching.wence.uk/comp52315/images/manual/cacheschematic.svg alt="Example layout of caches and memory for a 4 core system."><figcaption><p>Example layout of caches and memory for a 4 core system.</p></figcaption></figure><p>Although in this course we will spend most of our time focussing on
+<em>single core</em> performance, in practice, most scientific computing
+algorithms will be parallel.</p><p>To understand how parallelisation will affect the performance on real
+hardware, we need to know if will be limited by a resource which is
+scalable, or saturating.</p><div class="book-columns flex flex-wrap"><div class="flex-even markdown-inner"><h3 id=scalable-resources>Scalable resources</h3><p>These resources are private to each core/chip. For example, CPU cores
+themselves are a <em>scalable</em> resource. Adding a second core doubles the
+number of floating point operations we can perform.</p><p>As a consequence, if our code is limited by the floating point
+throughput, adding more cores is a useful thing to do.</p><figure style=width:100%><img class=scaled src=https://teaching.wence.uk/comp52315/images/auto/scalable-resource.svg alt="Prototypical performance of a scalable resource"><figcaption><p>Prototypical performance of a scalable resource</p></figcaption></figure></div><div class="flex-even markdown-inner"><h3 id=saturatingshared-resources>Saturating/shared resources</h3><p>These resources are shared between cores. The typical example is main
+memory bandwidth. In the diagram above, we see that the main memory
+interface is shared between the four cores. This is typical for modern
+CPUs.</p><p>On a single chip, if our code is limited by the main memory bandwidth,
+adding more cores is <em>not</em> useful. Instead we would need to add
+another chip (with another memory system).</p><figure style=width:100%><img class=scaled src=https://teaching.wence.uk/comp52315/images/auto/saturating-resource.svg alt="Prototypical performance of a saturating resource"><figcaption><p>Prototypical performance of a saturating resource</p></figcaption></figure></div></div><p>You should explore this on Hamilton in <a href=https://teaching.wence.uk/comp52315/exercises/exercise03/>exercise 3</a></p><h2 id=summary-challenges-for-writing-high-performance-code>Summary: challenges for writing high performance code
+<a class=anchor href=#summary-challenges-for-writing-high-performance-code>#</a></h2><p>At a high level, the performance of an algorithm is dependent on:</p><ol><li>how many instructions are required to implement the algorithm;</li><li>how efficiently those instructions can be executed on a processor;</li><li>and what the runtime contribution of the required data transfers
+is.</li></ol><p>Given an optimal <em>algorithm</em>, converting that to an optimal
+<em>implementation</em> requires addressing all of these points in tandem.
+This is made complicated by the complexity and parallelism of modern
+hardware. A typical Intel server offers</p><ol><li>Socket-based parallelism: 1-4 CPUs on a typical motherboard;</li><li>Core-based parallelism: 4-32 cores in a typical CPU;</li><li>SIMD/Vectorisation: vector registers capable of holding 2-16 single;
+precision elements on each core;</li><li>Superscalar execution: typically 2-8 instructions per cycle per core.</li></ol><p>To limit the scope to something reasonable, we will focus mainly on
+the SIMD and superscalar parts of this picture. The rationale for this
+is that we should aim for good single core performance <em>before</em>
+looking at parallelism. If we don&rsquo;t, we might be led in the wrong
+direction by a &ldquo;false&rdquo; idea of the performance limits.</p></article><footer class=book-footer><div class="flex flex-wrap justify-between"><div><a class="flex align-center" href=https://github.com/wenceorg/comp52315/commit/cdfbd8f86c56d4a17e7e322b59a75940cea4fb4e title="Last modified by Lawrence Mitchell | April 7, 2022" target=_blank rel=noopener><img src=/comp52315/svg/calendar.svg class=book-icon alt=Calendar>
+<span>April 7, 2022</span></a></div><div><a class="flex align-center" href=https://github.com/wenceorg/comp52315/edit/main/site/content//notes/memory.md target=_blank rel=noopener><img src=/comp52315/svg/edit.svg class=book-icon alt=Edit>
+<span>Edit this page</span></a></div></div><div class="flex flex-wrap align-right"><p>© 2020&ndash; <a href=mailto:lawrence.mitchell@durham.ac.uk>Lawrence Mitchell</a> and <a href=https://www.dur.ac.uk/>Durham University</a>.</p><p><a rel=license href=http://creativecommons.org/licenses/by-sa/4.0/><img alt="Creative Commons License" style=border-width:0 src=/comp52315/cc-by-sa.svg></a>
+This work is licensed under a <a rel=license href=http://creativecommons.org/licenses/by-sa/4.0/>Creative
+Commons Attribution-ShareAlike 4.0 International License</a>.</p></div></footer><label for=menu-control class="hidden book-menu-overlay"></label></div><aside class=book-toc><nav id=TableOfContents><ul><li><a href=#an-overview-of-memory-hierarchies>An overview of memory hierarchies</a><ul><li><a href=#reduction-benchmark>Reduction benchmark</a></li><li><a href=#memory-hierarchy>Memory hierarchy</a></li><li><a href=#caches>Caches</a><ul><li><a href=#principle-of-locality>Principle of locality</a><ul><li><a href=#temporal-locality>Temporal locality</a></li><li><a href=#spatial-locality>Spatial locality</a></li></ul></li><li><a href=#high-level-design-of-caches>High-level design of caches</a><ul><li><a href=#eviction-from-caches>Eviction from caches</a></li></ul></li><li><a href=#programming-cache-friendly-algorithms>Programming cache friendly algorithms</a></li></ul></li><li><a href=#measurement-of-cache-bandwidth>Measurement of cache bandwidth</a></li><li><a href=#a-predictive-model-for-reductions>A predictive model for reductions</a><ul><li><a href=#l1-bandwidth>L1 bandwidth</a></li><li><a href=#l2-bandwidth>L2 bandwidth</a></li><li><a href=#l3-and-main-memory-bandwidth>L3 and main memory bandwidth</a></li></ul></li><li><a href=#stepping-back>Stepping back</a></li><li><a href=#scalable-and-saturating-resources>Scalable and saturating resources</a></li><li><a href=#summary-challenges-for-writing-high-performance-code>Summary: challenges for writing high performance code</a></li></ul></li></ul></nav></aside></main></body></html>

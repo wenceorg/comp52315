@@ -1,0 +1,84 @@
+<!doctype html><html lang=en dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="Measuring multi-core memory bandwidth #  The goal of this exercise is to measure the memory bandwidth for various vector sizes as a function of the number of cores used to process the vector.
+Again, we will do this with likwid-bench. This time, we will use the clload benchmark.
+Setup #  As usual, you should do this on a compute node on Hamilton. See the quickstart in exercise 1 if you can&rsquo;t remember how to do this."><meta name=theme-color content="#FFFFFF"><meta property="og:title" content="Memory bandwidth"><meta property="og:description" content="Measuring multi-core memory bandwidth #  The goal of this exercise is to measure the memory bandwidth for various vector sizes as a function of the number of cores used to process the vector.
+Again, we will do this with likwid-bench. This time, we will use the clload benchmark.
+Setup #  As usual, you should do this on a compute node on Hamilton. See the quickstart in exercise 1 if you can&rsquo;t remember how to do this."><meta property="og:type" content="article"><meta property="og:url" content="https://teaching.wence.uk/comp52315/exercises/exercise03/"><meta property="article:modified_time" content="2022-04-07T18:18:31+01:00"><title>Memory bandwidth | COMP52315 – Performance Engineering</title><link rel=icon href=/comp52315/favicon.svg type=image/x-icon><link rel=stylesheet href=/comp52315/book.min.0cb0b7d6a1ed5d0e95321cc15edca4d6e9cc406149d1f4a3f25fd532f6a3bb38.css integrity="sha256-DLC31qHtXQ6VMhzBXtyk1unMQGFJ0fSj8l/VMvajuzg="><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css integrity=sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X crossorigin=anonymous><script defer src=https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.js integrity=sha384-g7c+Jr9ZivxKLnZTDUhnkOnsh30B4H0rpLUpJ4jAIKs4fnJI+sEnkvrMWph2EDg4 crossorigin=anonymous></script><script defer src=https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/contrib/auto-render.min.js integrity=sha384-mll67QQFJfxn0IYznZYonOWZ644AWYC+Pt2cHqMaRhXVrursRwvLnLaebdGIlYNa crossorigin=anonymous></script><script>document.addEventListener("DOMContentLoaded",function(){renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false},{left:"\\(",right:"\\)",display:false},{left:"\\[",right:"\\]",display:true}]})});</script></head><body dir=ltr><input type=checkbox class="hidden toggle" id=menu-control>
+<input type=checkbox class="hidden toggle" id=toc-control><main class="container flex"><aside class=book-menu><nav><div class=book-brand><img class=book-center src=/comp52315/logo.svg alt=Logo><h2><a href=/comp52315>COMP52315 – Performance Engineering</a></h2></div><ul><li><span>Administrivia</span><ul><li><a href=/comp52315/setup/contact/>Contact details</a></li><li><a href=/comp52315/setup/hamilton/>Hamilton accounts</a></li><li><a href=/comp52315/setup/configuration/>ssh configuration</a></li><li><a href=/comp52315/setup/unix/>Unix resources</a></li></ul></li><li><span>Exercises</span><ul><li><a href=/comp52315/exercises/exercise01/>Sum reductions</a></li><li><a href=/comp52315/exercises/exercise02/>Caches</a></li><li><a href=/comp52315/exercises/exercise03/ class=active>Memory bandwidth</a></li><li><a href=/comp52315/exercises/exercise04/>Roofline analysis</a></li><li><a href=/comp52315/exercises/exercise05/>Models and measurements</a></li><li><a href=/comp52315/exercises/exercise06/>Profiling</a></li><li><a href=/comp52315/exercises/exercise07/>Loop tiling matrix transpose</a></li><li><a href=/comp52315/exercises/exercise08/>Loop tiling matrix-matrix multiplication</a></li><li><a href=/comp52315/exercises/exercise09/>Compiler feedback and the BLIS DGEMM</a></li><li><a href=/comp52315/exercises/exercise10/>Stencil layer conditions</a></li></ul></li><li><span>Notes</span><ul><li><a href=/comp52315/notes/introduction/>Introduction</a></li><li><a href=/comp52315/notes/memory/>The memory hierarchy</a></li><li><a href=/comp52315/notes/roofline/>Performance models: roofline</a></li><li><a href=/comp52315/notes/measurements/>Measurement and profiling</a></li><li><a href=/comp52315/notes/tiling/>Cache blocking/tiling</a></li></ul></li><li><a href=/comp52315/slides/>Slides</a></li><li><a href=/comp52315/coursework/>Coursework: fast finite elements</a><ul></ul></li><li><a href=/comp52315/resources/>Further resources</a></li><li><a href=/comp52315/acknowledgements/>Acknowledgements</a></li><li><span>Past editions</span><ul><li><a href=/comp52315/past-editions/2020-21/>2020/21</a><ul></ul></li></ul></li></ul></nav><script>(function(){var menu=document.querySelector("aside.book-menu nav");addEventListener("beforeunload",function(event){localStorage.setItem("menu.scrollTop",menu.scrollTop);});menu.scrollTop=localStorage.getItem("menu.scrollTop");})();</script></aside><div class=book-page><header class=book-header><div class="flex align-center justify-between"><label for=menu-control><img src=/comp52315/svg/menu.svg class=book-icon alt=Menu></label>
+<strong>Memory bandwidth</strong>
+<label for=toc-control><img src=/comp52315/svg/toc.svg class=book-icon alt="Table of Contents"></label></div><aside class="hidden clearfix"><nav id=TableOfContents><ul><li><a href=#measuring-multi-core-memory-bandwidth>Measuring multi-core memory bandwidth</a><ul><li><a href=#setup>Setup</a></li><li><a href=#compute-node-topology>Compute node topology</a></li><li><a href=#interlude-more-on-likwid-bench>Interlude: more on <code>likwid-bench</code></a><ul><li><a href=#selecting-the-number-of-cores-to-use>Selecting the number of cores to use</a></li><li><a href=#benchmarking-on-multi-socket-systems>Benchmarking on multi-socket systems</a></li></ul></li><li><a href=#measuring-the-memory-bandwidth>Measuring the memory bandwidth</a></li></ul></li></ul></nav></aside></header><article class=markdown><blockquote class="book-hint warning"><span>This course page was updated until March 2022 when I left Durham University.
+The materials herein are therefore not necessarily still in date.</span></blockquote><h1 id=measuring-multi-core-memory-bandwidth>Measuring multi-core memory bandwidth
+<a class=anchor href=#measuring-multi-core-memory-bandwidth>#</a></h1><p>The goal of this exercise is to measure the memory bandwidth for
+various vector sizes as a function of the number of cores used to
+process the vector.</p><p>Again, we will do this with <code>likwid-bench</code>. This time, we will use the
+<code>clload</code> benchmark.</p><h2 id=setup>Setup
+<a class=anchor href=#setup>#</a></h2><p>As usual, you should do this on a compute node on Hamilton. See the
+<a href=https://teaching.wence.uk/comp52315/exercises/exercise01/#setup-logging-in-to-hamilton>quickstart in exercise 1</a> if you can&rsquo;t
+remember how to do this.</p><h2 id=compute-node-topology>Compute node topology
+<a class=anchor href=#compute-node-topology>#</a></h2><blockquote class=exercise><h3>Exercise</h3><span>The first thing we need to do is figure out what the <em>topology</em> of the
+node we&rsquo;re running on is. We can do that by running <code>likwid-topology -g</code>. We can use this to guide appropriate choices of vectors.</span></blockquote><blockquote class=question><h3>Question</h3><span>How many sockets are there on a node on Hamilton?</span></blockquote><blockquote class=question><h3>Question</h3><span>On each socket, how many cores are there?</span></blockquote><blockquote class=question><h3>Question</h3><span>How large are the caches (L1, L2, L3) on each socket? Which levels of
+the cache are private, and which are shared?</span></blockquote><p>Having answered these questions, you should be able to pick
+appropriate vector sizes to check the parallel memory
+bandwidth of L1, L2, and L3 caches, and main memory.</p><h2 id=interlude-more-on-likwid-bench>Interlude: more on <code>likwid-bench</code>
+<a class=anchor href=#interlude-more-on-likwid-bench>#</a></h2><h3 id=selecting-the-number-of-cores-to-use>Selecting the number of cores to use
+<a class=anchor href=#selecting-the-number-of-cores-to-use>#</a></h3><p>You should have determined that a Hamilton node has two sockets, each
+with 12 cores, and that the L1 cache is 32KB and private to each core
+(the remaining answers are left blank!). Let&rsquo;s look at how to
+benchmark in multi-core mode with <code>likwid-bench</code>.</p><p>To select the number of cores to allocate to the benchmark we have to
+adapt the workgroup string. Previously we just said <code>-w S0:size:1</code> which means</p><dl><dt><code>S0</code></dt><dd>The memory socket on which to <em>allocate</em> the vector.</dd><dt><code>size</code></dt><dd>As before, the size of the vector.</dd><dt><code>1</code></dt><dd>The <em>number</em> of cores to use.</dd></dl><p>To change the number of cores, we replace <code>1</code> by our choice
+(say <code>2</code>). The vector size is the global vector size, so if
+we run with a vector size $S$ on
+$N$ cores, then each core gets
+$\frac{S}{N}$ elements.</p><p>For example, to run on one socket with 4 cores, such that each core
+handles 4KB of data, we run <code>likwid-bench -t clload -w S0:16kB:4</code>, which should produce output like the below</p><div class=highlight><pre style=color:#272822;background-color:#fafafa><code class=language-txt data-lang=txt>Allocate: Process running on core 0 (Domain S0) - Vector length 16000 Offset 0 Alignment 512
+--------------------------------------------------------------------------------
+LIKWID MICRO BENCHMARK
+Test: clload
+--------------------------------------------------------------------------------
+Using 1 work groups
+Using 4 threads
+--------------------------------------------------------------------------------
+Group: 0 Thread 0 Global Thread 0 running on core 0 - Vector length 2000 Offset 0
+Group: 0 Thread 1 Global Thread 1 running on core 1 - Vector length 2000 Offset 480
+Group: 0 Thread 2 Global Thread 2 running on core 2 - Vector length 2000 Offset 960
+Group: 0 Thread 3 Global Thread 3 running on core 3 - Vector length 2000 Offset 1440
+--------------------------------------------------------------------------------
+Cycles:                 1756452960
+CPU Clock:              2199997930
+Cycle Clock:            2199997930
+Time:                   7.983885e-01 sec
+Iterations:             134217728
+Iterations per thread:  33554432
+Inner loop executions:  62
+Size:                   16000
+Size per thread:        4000
+Number of Flops:        0
+MFlops/s:               0.00
+Data volume (Byte):     536870912000
+<span style=display:block;width:100%;background-color:#e1e1e1>MByte/s:                672443.23
+</span>Cycles per update:      0.026173
+Cycles per cacheline:   0.209386
+Loads per update:       1
+Stores per update:      0
+Instructions:           14562623504
+UOPs:                   12482248704
+--------------------------------------------------------------------------------
+</code></pre></div><p><code>likwid-bench</code> reports which cores it used at the top and then
+provides the same information as before. Again, we are interested in
+the highlighted memory bandwidth line.</p><h3 id=benchmarking-on-multi-socket-systems>Benchmarking on multi-socket systems
+<a class=anchor href=#benchmarking-on-multi-socket-systems>#</a></h3><p>If the node has more than one socket, we need to make sure that we
+allocate the vector on the correct socket. For example, if we have two
+12-core sockets and want to benchmark main memory bandwidth on all 24
+cores we should write</p><pre><code>likwid-bench -t clload -w S0:1GB:12 -w S1:1GB:12
+</code></pre><p>This tells <code>likwid-bench</code> to allocate two vectors each of 1GB, one on
+each socket, and to use 12 cores on each socket.</p><h2 id=measuring-the-memory-bandwidth>Measuring the memory bandwidth
+<a class=anchor href=#measuring-the-memory-bandwidth>#</a></h2><blockquote class=exercise><h3>Exercise</h3><span><p>You should now produce plots of memory bandwidth as a function of the
+number of cores for data at different levels in the memory hierarchy.</p><p>For the private caches (L1, L2), pick a vector size such that the
+vector fills about half the cache on each core.</p><p>For the L3 cache, pick a vector size to fill around two-thirds of the
+cache.</p><p>For the main memory, pick a vector size of around 1GB/socket.</p><p>You should produce plots of the memory bandwidth as a function of the
+number of cores for each of these different vector sizes.</p></span></blockquote><blockquote class=question><h3>Question</h3><span><p>Do you observe any difference in the <em>scalability</em> of the memory
+bandwidth when you change the size of the vectors?</p><p>Can you explain what you see based on the notion of shared and
+scalable resources?</p></span></blockquote></article><footer class=book-footer><div class="flex flex-wrap justify-between"><div><a class="flex align-center" href=https://github.com/wenceorg/comp52315/commit/cdfbd8f86c56d4a17e7e322b59a75940cea4fb4e title="Last modified by Lawrence Mitchell | April 7, 2022" target=_blank rel=noopener><img src=/comp52315/svg/calendar.svg class=book-icon alt=Calendar>
+<span>April 7, 2022</span></a></div><div><a class="flex align-center" href=https://github.com/wenceorg/comp52315/edit/main/site/content//exercises/exercise03.md target=_blank rel=noopener><img src=/comp52315/svg/edit.svg class=book-icon alt=Edit>
+<span>Edit this page</span></a></div></div><div class="flex flex-wrap align-right"><p>© 2020&ndash; <a href=mailto:lawrence.mitchell@durham.ac.uk>Lawrence Mitchell</a> and <a href=https://www.dur.ac.uk/>Durham University</a>.</p><p><a rel=license href=http://creativecommons.org/licenses/by-sa/4.0/><img alt="Creative Commons License" style=border-width:0 src=/comp52315/cc-by-sa.svg></a>
+This work is licensed under a <a rel=license href=http://creativecommons.org/licenses/by-sa/4.0/>Creative
+Commons Attribution-ShareAlike 4.0 International License</a>.</p></div></footer><label for=menu-control class="hidden book-menu-overlay"></label></div><aside class=book-toc><nav id=TableOfContents><ul><li><a href=#measuring-multi-core-memory-bandwidth>Measuring multi-core memory bandwidth</a><ul><li><a href=#setup>Setup</a></li><li><a href=#compute-node-topology>Compute node topology</a></li><li><a href=#interlude-more-on-likwid-bench>Interlude: more on <code>likwid-bench</code></a><ul><li><a href=#selecting-the-number-of-cores-to-use>Selecting the number of cores to use</a></li><li><a href=#benchmarking-on-multi-socket-systems>Benchmarking on multi-socket systems</a></li></ul></li><li><a href=#measuring-the-memory-bandwidth>Measuring the memory bandwidth</a></li></ul></li></ul></nav></aside></main></body></html>

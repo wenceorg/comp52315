@@ -1,0 +1,121 @@
+<!doctype html><html lang=en dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="Fast finite elements #   The submission deadline for this work is 2022-02-21 at 14:00UTC.   Introduction #  The finite element method is a popular and flexible method for the numerical solution of partial differential equations. In this coursework, you will study and benchmark some performance optimisations for a prototypical finite element problem.
+In particular, we will study the solution of the simplest possible finite element problem, to solve the linear system"><meta name=theme-color content="#FFFFFF"><meta property="og:title" content="Coursework: fast finite elements"><meta property="og:description" content><meta property="og:type" content="website"><meta property="og:url" content="https://teaching.wence.uk/comp52315/coursework/"><title>Coursework: fast finite elements | COMP52315 – Performance Engineering</title><link rel=icon href=/comp52315/favicon.svg type=image/x-icon><link rel=stylesheet href=/comp52315/book.min.0cb0b7d6a1ed5d0e95321cc15edca4d6e9cc406149d1f4a3f25fd532f6a3bb38.css integrity="sha256-DLC31qHtXQ6VMhzBXtyk1unMQGFJ0fSj8l/VMvajuzg="><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css integrity=sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X crossorigin=anonymous><script defer src=https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.js integrity=sha384-g7c+Jr9ZivxKLnZTDUhnkOnsh30B4H0rpLUpJ4jAIKs4fnJI+sEnkvrMWph2EDg4 crossorigin=anonymous></script><script defer src=https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/contrib/auto-render.min.js integrity=sha384-mll67QQFJfxn0IYznZYonOWZ644AWYC+Pt2cHqMaRhXVrursRwvLnLaebdGIlYNa crossorigin=anonymous></script><script>document.addEventListener("DOMContentLoaded",function(){renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false},{left:"\\(",right:"\\)",display:false},{left:"\\[",right:"\\]",display:true}]})});</script></head><body dir=ltr><input type=checkbox class="hidden toggle" id=menu-control>
+<input type=checkbox class="hidden toggle" id=toc-control><main class="container flex"><aside class=book-menu><nav><div class=book-brand><img class=book-center src=/comp52315/logo.svg alt=Logo><h2><a href=/comp52315>COMP52315 – Performance Engineering</a></h2></div><ul><li><span>Administrivia</span><ul><li><a href=/comp52315/setup/contact/>Contact details</a></li><li><a href=/comp52315/setup/hamilton/>Hamilton accounts</a></li><li><a href=/comp52315/setup/configuration/>ssh configuration</a></li><li><a href=/comp52315/setup/unix/>Unix resources</a></li></ul></li><li><span>Exercises</span><ul><li><a href=/comp52315/exercises/exercise01/>Sum reductions</a></li><li><a href=/comp52315/exercises/exercise02/>Caches</a></li><li><a href=/comp52315/exercises/exercise03/>Memory bandwidth</a></li><li><a href=/comp52315/exercises/exercise04/>Roofline analysis</a></li><li><a href=/comp52315/exercises/exercise05/>Models and measurements</a></li><li><a href=/comp52315/exercises/exercise06/>Profiling</a></li><li><a href=/comp52315/exercises/exercise07/>Loop tiling matrix transpose</a></li><li><a href=/comp52315/exercises/exercise08/>Loop tiling matrix-matrix multiplication</a></li><li><a href=/comp52315/exercises/exercise09/>Compiler feedback and the BLIS DGEMM</a></li><li><a href=/comp52315/exercises/exercise10/>Stencil layer conditions</a></li></ul></li><li><span>Notes</span><ul><li><a href=/comp52315/notes/introduction/>Introduction</a></li><li><a href=/comp52315/notes/memory/>The memory hierarchy</a></li><li><a href=/comp52315/notes/roofline/>Performance models: roofline</a></li><li><a href=/comp52315/notes/measurements/>Measurement and profiling</a></li><li><a href=/comp52315/notes/tiling/>Cache blocking/tiling</a></li></ul></li><li><a href=/comp52315/slides/>Slides</a></li><li><a href=/comp52315/coursework/ class=active>Coursework: fast finite elements</a><ul></ul></li><li><a href=/comp52315/resources/>Further resources</a></li><li><a href=/comp52315/acknowledgements/>Acknowledgements</a></li><li><span>Past editions</span><ul><li><a href=/comp52315/past-editions/2020-21/>2020/21</a><ul></ul></li></ul></li></ul></nav><script>(function(){var menu=document.querySelector("aside.book-menu nav");addEventListener("beforeunload",function(event){localStorage.setItem("menu.scrollTop",menu.scrollTop);});menu.scrollTop=localStorage.getItem("menu.scrollTop");})();</script></aside><div class=book-page><header class=book-header><div class="flex align-center justify-between"><label for=menu-control><img src=/comp52315/svg/menu.svg class=book-icon alt=Menu></label>
+<strong>Coursework: fast finite elements</strong>
+<label for=toc-control><img src=/comp52315/svg/toc.svg class=book-icon alt="Table of Contents"></label></div><aside class="hidden clearfix"><nav id=TableOfContents><ul><li><a href=#fast-finite-elements>Fast finite elements</a><ul><li><a href=#introduction>Introduction</a><ul><li><a href=#selecting-backends>Selecting backends</a></li><li><a href=#parallelism>Parallelism</a></li><li><a href=#likwid-annotations>Likwid annotations</a></li></ul></li><li><a href=#task>Task</a></li><li><a href=#mark-scheme-and-submission>Mark scheme and submission</a></li></ul></li></ul></nav></aside></header><article class=markdown><blockquote class="book-hint warning"><span>This course page was updated until March 2022 when I left Durham University.
+The materials herein are therefore not necessarily still in date.</span></blockquote><h1 id=fast-finite-elements>Fast finite elements
+<a class=anchor href=#fast-finite-elements>#</a></h1><blockquote class="book-hint warning"><span>The submission deadline for this work is 2022-02-21 at 14:00UTC.</span></blockquote><h2 id=introduction>Introduction
+<a class=anchor href=#introduction>#</a></h2><p>The finite element method is a popular and flexible method for the
+numerical solution of partial differential equations. In this
+coursework, you will study and benchmark some performance
+optimisations for a prototypical finite element problem.</p><p>In particular, we will study the solution of the simplest possible
+finite element problem, to solve the linear system</p><p>$$
+A u = f
+$$</p><p>where $A$ is the mass matrix. We will do this in a matrix-free manner,
+that is, rather than creating the matrix $A$ and inverting it, we will
+use a diagonally preconditioned <a href=https://en.wikipedia.org/wiki/Conjugate_gradient_method>Conjugate
+Gradient</a>
+method to compute $u = A^{-1} f$. This only needs matrix-vector
+products and the inverse of the diagonal of $A$.</p><p>This problem is the same as the first two <a href=https://ceed.exascaleproject.org/bps/>&ldquo;bake-off&rdquo;
+problems</a> proposed by the <a href=https://ceed.exascaleproject.org>CEED
+project</a>.</p><p>A wide-scale study of these problems in a number of finite element
+codes is presented in <a href=https://arxiv.org/abs/2004.06722>this paper</a>.
+You may find this useful to set the scene and get some ideas as to
+what kinds of performance to look for.</p><p>We will use their code to perform the benchmarking and the performance
+study. You can obtain the code from <a href=https://github.com/ceed/libceed/>their github
+repository</a>. You will also need a
+recent version of <a href=https://gitlab.com/petsc/petsc/>PETSc</a>, build and
+compile it following their instructions and set the <code>PETSC_DIR</code> and
+<code>PETSC_ARCH</code> environment variables accordingly.</p><blockquote class="book-hint info"><span><p>On Hamilton, I provide a usable version of PETSc.</p><p>To use it, you&rsquo;ll need to use the following modules</p><pre><code>gcc/9.3.0
+intelmpi/gcc/2019.6
+</code></pre><p>and set the environment variables</p><pre><code>export PETSC_DIR=/ddn/data/vtdb72/petsc
+export PETSC_ARCH=arch-linux2-c-opt
+</code></pre></span></blockquote><p>With PETSc available, you can build the CEED library following their <a href=https://github.com/ceed/libceed/#building>build
+instructions</a>: the
+simplest thing to do is run <code>make</code> in the <code>libceed</code> directory.</p><blockquote class="book-hint info"><span><p>On Hamilton, you will need to provide the location of the BLAS
+library when building libceed. If you are using my version of
+PETSc as specified above you&rsquo;ll need to do:</p><pre><code>make BLAS_LIB=&quot;-L$PETSC_DIR/$PETSC_ARCH/lib -Wl,-rpath,$PETSC_DIR/$PETSC_ARCH/lib -lopenblas&quot;
+</code></pre><p>In addition to any options you pass to <code>make</code>.</p></span></blockquote><p>We will use the <code>bpsraw</code> benchmark program. Having built the library,
+go to the <code>examples/petsc</code> subdirectory and do</p><pre><code>$ cd examples/petsc
+$ make bpsraw
+</code></pre><p>We can now run the benchmark, it uses commandline options to control
+which problem to run, along with the approximation degree and size of
+the problem. We&rsquo;re interested in the <code>bp1</code> and <code>bp2</code> problems.</p><pre><code>$ ./bpsraw -problem bp1
+
+-- CEED Benchmark Problem 1 -- libCEED + PETSc --
+  PETSc:
+    PETSc Vec Type                     : seq
+  libCEED:
+    libCEED Backend                    : /cpu/self/xsmm/blocked
+    libCEED Backend MemType            : host
+    libCEED User Requested MemType     : none
+  Mesh:
+    Number of 1D Basis Nodes (P)       : 2
+    Number of 1D Quadrature Points (Q) : 3
+    Global nodes                       : 1331
+    Process Decomposition              : 1 1 1
+    Local Elements                     : 1000 = 10 10 10
+    Owned nodes                        : 1331 = 11 11 11
+    DoF per node                       : 1
+  KSP:
+    KSP Type                           : cg
+    KSP Convergence                    : DIVERGED_ITS
+    Total KSP Iterations               : 20
+    Final rnorm                        : 3.042095e-08
+  Performance:
+    Pointwise Error (max)              : 1.088768e-02
+    CG Solve Time                      : 0.00696532 (0.00696532) sec
+    DoFs/Sec in CG                     : 3.82179 (3.82179) million
+</code></pre><p>You might see different numbers and details, but the idea is the same.</p><p>You can control (approximately) the size of the problem by modifying
+the number of <code>Local Elements</code>.</p><pre><code>$ ./bpsraw -problem bp1 -local 10000
+...
+    Global nodes                       : 11466
+    Process Decomposition              : 1 1 1
+    Local Elements                     : 10000 = 20 20 25
+...
+</code></pre><p>Finally, we can change the computational cost of the main
+matrix-vector product by modifying the polynomial degree (which is
+equal to $P-1$ where $P$ is the number of 1D basis nodes shown above).</p><pre><code>$ ./bpsraw -problem bp1 -degree 7
+...
+    Number of 1D Basis Nodes (P)       : 8
+    Number of 1D Quadrature Points (Q) : 9
+    Global nodes                       : 960
+...
+</code></pre><h3 id=selecting-backends>Selecting backends
+<a class=anchor href=#selecting-backends>#</a></h3><p>LibCEED comes with a number of different backends, you can select
+these by specifying <code>-ceed BACKEND_STRING</code>. A short description is
+given <a href=https://github.com/ceed/libceed/#backends>here</a>. If you used
+the default build parameters then you have access to</p><ul><li><code>/cpu/self/ref/serial</code></li><li><code>/cpu/self/ref/blocked</code></li><li><code>/cpu/self/avx/serial</code></li><li><code>/cpu/self/avx/blocked</code></li></ul><p>For example, the run</p><pre><code>$ ./bpsraw -ceed /cpu/self/ref/blocked`
+</code></pre><p>selects the &ldquo;reference&rdquo; blocked backend.</p><p>We&rsquo;ll use these backends when benchmarking.</p><blockquote class="book-hint info"><span><p>You may also wish to compile the library with
+<a href=https://github.com/hfp/libxsmm>libxsmm</a>, in which case you&rsquo;ll also
+have access to</p><ul><li><code>/cpu/self/xsmm/serial</code></li><li><code>/cpu/self/xsmm/blocked</code></li></ul></span></blockquote><h3 id=parallelism>Parallelism
+<a class=anchor href=#parallelism>#</a></h3><p>The code is parallelised using MPI. So you can run it in parallel with</p><pre><code>$ mpiexec -n NUMBER_OF_PROCESSES ./bpsraw ...
+</code></pre><h3 id=likwid-annotations>Likwid annotations
+<a class=anchor href=#likwid-annotations>#</a></h3><p>If you want to add likwid annotations (for example to get floating
+point throughput), you&rsquo;ll need to edit <code>bpsraw.c</code> to include the
+likwid header and add appropriate <code>LIKWID_MARKER_XXX</code> calls.</p><p>The main computational work is the section of code between the two <code>// -- Performance logging</code> comments in <code>main</code>.</p><blockquote class="book-hint info"><span>To make it easy to add these markers and compile both with, and
+without, likwid, you could use the <a href=https://teaching.wence.uk/comp52315/code/snippets/likwidinc.h><code>likwidinc.h</code></a> header we&rsquo;ve used previously.</span></blockquote><p>In addition, you&rsquo;ll then also need to add</p><pre><code>CPPFLAGS += -DLIKWID_PERFMON
+LDLIBS += -llikwid
+</code></pre><p>In the <code>Makefile</code> after their definitions and rebuild.</p><blockquote class="book-hint info"><span>This is rather fiddly with MPI parallelism, so you might only want to
+do likwid annotation of serial runs.</span></blockquote><h2 id=task>Task
+<a class=anchor href=#task>#</a></h2><p>You should perform a profiling and performance analysis of the code.</p><p>You should study:</p><ol><li>How the performance varies for the different backends as a function
+of both the polynomial degree (the <code>-degree</code> argument, vary this
+from 1 to 16) and the problem size (the <code>-local</code> argument, vary
+this from 1000 to 500000). Which backend provides the best
+performance? What about the worst? Does it depend on the degree or
+problem size?</li><li>Do your findings/conclusions change when you move from <code>bp1</code> to
+<code>bp2</code>?</li><li>For the best and worst backends, how does the performance scale in
+parallel? You can restrict yourself to a single Hamilton node.</li><li>How close to the hardware performance limits you think the code is.
+For example, you could perform a roofline study.</li></ol><p>You should write up your findings and a discussion in a short report.
+It should describe the experiments you performed, and present (in an
+appropriate manner) the data you collected along with the answers to
+the above questions.</p><h2 id=mark-scheme-and-submission>Mark scheme and submission
+<a class=anchor href=#mark-scheme-and-submission>#</a></h2><p>You should submit, via ULTRA, a <strong>PDF</strong> of your report (max 5 pages,
+including figures and tables), named by your CIS username.</p><table><thead><tr><th align=right>Artifact</th><th align=left>Descriptor</th><th>Marks</th></tr></thead><tbody><tr><td align=right>Report</td><td align=left>Appropriate use of performance measurements</td><td>20</td></tr><tr><td align=right>Report</td><td align=left>Appropriate use of performance models</td><td>20</td></tr><tr><td align=right>Report</td><td align=left>Analysis and presentation of data, writing</td><td>60</td></tr></tbody></table><p>The reports will be marked with reference to the <a href=https://durhamuniversity.sharepoint.com/teams/MScScientificComputingandDataAnalysis/SitePages/Written-Work-Descriptors-%28Non-Dissertation%29.aspx>descriptors for
+written
+work</a>
+on the MISCADA sharepoint site.</p></article><footer class=book-footer><div class="flex flex-wrap justify-between"><div><a class="flex align-center" href=https://github.com/wenceorg/comp52315/commit/cdfbd8f86c56d4a17e7e322b59a75940cea4fb4e title="Last modified by Lawrence Mitchell | April 7, 2022" target=_blank rel=noopener><img src=/comp52315/svg/calendar.svg class=book-icon alt=Calendar>
+<span>April 7, 2022</span></a></div><div><a class="flex align-center" href=https://github.com/wenceorg/comp52315/edit/main/site/content//coursework/_index.md target=_blank rel=noopener><img src=/comp52315/svg/edit.svg class=book-icon alt=Edit>
+<span>Edit this page</span></a></div></div><div class="flex flex-wrap align-right"><p>© 2020&ndash; <a href=mailto:lawrence.mitchell@durham.ac.uk>Lawrence Mitchell</a> and <a href=https://www.dur.ac.uk/>Durham University</a>.</p><p><a rel=license href=http://creativecommons.org/licenses/by-sa/4.0/><img alt="Creative Commons License" style=border-width:0 src=/comp52315/cc-by-sa.svg></a>
+This work is licensed under a <a rel=license href=http://creativecommons.org/licenses/by-sa/4.0/>Creative
+Commons Attribution-ShareAlike 4.0 International License</a>.</p></div></footer><label for=menu-control class="hidden book-menu-overlay"></label></div><aside class=book-toc><nav id=TableOfContents><ul><li><a href=#fast-finite-elements>Fast finite elements</a><ul><li><a href=#introduction>Introduction</a><ul><li><a href=#selecting-backends>Selecting backends</a></li><li><a href=#parallelism>Parallelism</a></li><li><a href=#likwid-annotations>Likwid annotations</a></li></ul></li><li><a href=#task>Task</a></li><li><a href=#mark-scheme-and-submission>Mark scheme and submission</a></li></ul></li></ul></nav></aside></main></body></html>

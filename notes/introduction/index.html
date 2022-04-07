@@ -1,0 +1,158 @@
+<!doctype html><html lang=en dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="Resources in stored program computers #  To understand the performance of a code, we need to have an understanding of what hardware resources it uses, and what resources the hardware provides.
+All modern general purpose hardware uses a von Neumann architecture. That is, there is a memory which stores both the program code to be executed and the data for the program. This is attached to a processor (CPU) which contains execution units for executing individual instructions in the program code along with further parts of logical control and load/store of data."><meta name=theme-color content="#FFFFFF"><meta property="og:title" content="Introduction"><meta property="og:description" content="Resources in stored program computers #  To understand the performance of a code, we need to have an understanding of what hardware resources it uses, and what resources the hardware provides.
+All modern general purpose hardware uses a von Neumann architecture. That is, there is a memory which stores both the program code to be executed and the data for the program. This is attached to a processor (CPU) which contains execution units for executing individual instructions in the program code along with further parts of logical control and load/store of data."><meta property="og:type" content="article"><meta property="og:url" content="https://teaching.wence.uk/comp52315/notes/introduction/"><meta property="article:modified_time" content="2022-04-07T18:18:31+01:00"><title>Introduction | COMP52315 – Performance Engineering</title><link rel=icon href=/comp52315/favicon.svg type=image/x-icon><link rel=stylesheet href=/comp52315/book.min.0cb0b7d6a1ed5d0e95321cc15edca4d6e9cc406149d1f4a3f25fd532f6a3bb38.css integrity="sha256-DLC31qHtXQ6VMhzBXtyk1unMQGFJ0fSj8l/VMvajuzg="><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css integrity=sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X crossorigin=anonymous><script defer src=https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.js integrity=sha384-g7c+Jr9ZivxKLnZTDUhnkOnsh30B4H0rpLUpJ4jAIKs4fnJI+sEnkvrMWph2EDg4 crossorigin=anonymous></script><script defer src=https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/contrib/auto-render.min.js integrity=sha384-mll67QQFJfxn0IYznZYonOWZ644AWYC+Pt2cHqMaRhXVrursRwvLnLaebdGIlYNa crossorigin=anonymous></script><script>document.addEventListener("DOMContentLoaded",function(){renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false},{left:"\\(",right:"\\)",display:false},{left:"\\[",right:"\\]",display:true}]})});</script></head><body dir=ltr><input type=checkbox class="hidden toggle" id=menu-control>
+<input type=checkbox class="hidden toggle" id=toc-control><main class="container flex"><aside class=book-menu><nav><div class=book-brand><img class=book-center src=/comp52315/logo.svg alt=Logo><h2><a href=/comp52315>COMP52315 – Performance Engineering</a></h2></div><ul><li><span>Administrivia</span><ul><li><a href=/comp52315/setup/contact/>Contact details</a></li><li><a href=/comp52315/setup/hamilton/>Hamilton accounts</a></li><li><a href=/comp52315/setup/configuration/>ssh configuration</a></li><li><a href=/comp52315/setup/unix/>Unix resources</a></li></ul></li><li><span>Exercises</span><ul><li><a href=/comp52315/exercises/exercise01/>Sum reductions</a></li><li><a href=/comp52315/exercises/exercise02/>Caches</a></li><li><a href=/comp52315/exercises/exercise03/>Memory bandwidth</a></li><li><a href=/comp52315/exercises/exercise04/>Roofline analysis</a></li><li><a href=/comp52315/exercises/exercise05/>Models and measurements</a></li><li><a href=/comp52315/exercises/exercise06/>Profiling</a></li><li><a href=/comp52315/exercises/exercise07/>Loop tiling matrix transpose</a></li><li><a href=/comp52315/exercises/exercise08/>Loop tiling matrix-matrix multiplication</a></li><li><a href=/comp52315/exercises/exercise09/>Compiler feedback and the BLIS DGEMM</a></li><li><a href=/comp52315/exercises/exercise10/>Stencil layer conditions</a></li></ul></li><li><span>Notes</span><ul><li><a href=/comp52315/notes/introduction/ class=active>Introduction</a></li><li><a href=/comp52315/notes/memory/>The memory hierarchy</a></li><li><a href=/comp52315/notes/roofline/>Performance models: roofline</a></li><li><a href=/comp52315/notes/measurements/>Measurement and profiling</a></li><li><a href=/comp52315/notes/tiling/>Cache blocking/tiling</a></li></ul></li><li><a href=/comp52315/slides/>Slides</a></li><li><a href=/comp52315/coursework/>Coursework: fast finite elements</a><ul></ul></li><li><a href=/comp52315/resources/>Further resources</a></li><li><a href=/comp52315/acknowledgements/>Acknowledgements</a></li><li><span>Past editions</span><ul><li><a href=/comp52315/past-editions/2020-21/>2020/21</a><ul></ul></li></ul></li></ul></nav><script>(function(){var menu=document.querySelector("aside.book-menu nav");addEventListener("beforeunload",function(event){localStorage.setItem("menu.scrollTop",menu.scrollTop);});menu.scrollTop=localStorage.getItem("menu.scrollTop");})();</script></aside><div class=book-page><header class=book-header><div class="flex align-center justify-between"><label for=menu-control><img src=/comp52315/svg/menu.svg class=book-icon alt=Menu></label>
+<strong>Introduction</strong>
+<label for=toc-control><img src=/comp52315/svg/toc.svg class=book-icon alt="Table of Contents"></label></div><aside class="hidden clearfix"><nav id=TableOfContents><ul><li><a href=#resources-in-stored-program-computers>Resources in stored program computers</a><ul><li><a href=#resource-bottleneck-instruction-throughput>Resource bottleneck: instruction throughput</a></li><li><a href=#resource-bottleneck-data-transfers>Resource bottleneck: data transfers</a></li><li><a href=#understanding-performance-limits>Understanding performance limits</a></li><li><a href=#real-hardware-and-abstract-models>Real hardware and abstract models</a><ul><li><a href=#strategies-for-faster-chips>Strategies for faster chips</a></li><li><a href=#handling-latency>Handling latency</a></li></ul></li><li><a href=#data-parallelism>Data parallelism</a></li><li><a href=#putting-things-into-practice>Putting things into practice</a></li></ul></li></ul></nav></aside></header><article class=markdown><blockquote class="book-hint warning"><span>This course page was updated until March 2022 when I left Durham University.
+The materials herein are therefore not necessarily still in date.</span></blockquote><h1 id=resources-in-stored-program-computers>Resources in stored program computers
+<a class=anchor href=#resources-in-stored-program-computers>#</a></h1><p>To understand the performance of a code, we need to have an
+understanding of what hardware resources it <em>uses</em>, and what resources
+the hardware provides.</p><p>All modern general purpose hardware uses a <a href=https://en.wikipedia.org/wiki/Von_Neumann_architecture>von Neumann
+architecture</a>.
+That is, there is a memory which stores both the program code to be
+executed and the data for the program. This is attached to a processor
+(CPU) which contains execution units for executing individual
+instructions in the program code along with further parts of logical
+control and load/store of data.</p><figure style=width:50%><img class=scaled src=https://teaching.wence.uk/comp52315/images/manual/CPU.svg alt="High level view of processor architecture and resource use"><figcaption><p>High level view of processor architecture and resource use</p></figcaption></figure><p>From a (simplified) hardware designer&rsquo;s point of view, the primary
+resource of the processor is <em>instruction execution</em>. The primary
+hardware design goal is to <em>increase</em> instruction throughput
+(instructions/second).</p><p>Hence, all instructions are considered &ldquo;work&rdquo; by processor designers.
+Unfortunately, there is a mistmatch here, because not all instructions
+are considered to be &ldquo;work&rdquo; by software developers (you!).</p><h2 id=resource-bottleneck-instruction-throughput>Resource bottleneck: instruction throughput
+<a class=anchor href=#resource-bottleneck-instruction-throughput>#</a></h2><p>As a simple example, consider some code to add two arrays together</p><div class=highlight><pre style=color:#272822;background-color:#fafafa><code class=language-c data-lang=c><span style=color:#00a8c8>void</span> <span style=color:#75af00>add_arrays</span><span style=color:#111>(</span><span style=color:#00a8c8>int</span> <span style=color:#111>N</span><span style=color:#111>,</span> <span style=color:#00a8c8>double</span> <span style=color:#f92672>*</span> <span style=color:#00a8c8>restrict</span> <span style=color:#111>a</span><span style=color:#111>,</span> <span style=color:#00a8c8>const</span> <span style=color:#00a8c8>double</span> <span style=color:#f92672>*</span> <span style=color:#00a8c8>restrict</span> <span style=color:#111>b</span><span style=color:#111>)</span>
+<span style=color:#111>{</span>
+  <span style=color:#00a8c8>for</span> <span style=color:#111>(</span><span style=color:#00a8c8>int</span> <span style=color:#111>i</span> <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span><span style=color:#111>;</span> <span style=color:#111>i</span> <span style=color:#f92672>&lt;</span> <span style=color:#111>N</span><span style=color:#111>;</span> <span style=color:#111>i</span><span style=color:#f92672>++</span><span style=color:#111>)</span>
+    <span style=color:#111>a</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>]</span> <span style=color:#f92672>=</span> <span style=color:#111>a</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>]</span> <span style=color:#f92672>+</span> <span style=color:#111>b</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>];</span>
+<span style=color:#111>}</span>
+</code></pre></div><div class="book-columns flex flex-wrap"><div class="flex-even markdown-inner"><h2 id=programmer-view>Programmer view</h2><p>This loop does \(N\) floating point additions, the work is
+therefore \(N\) flops.</div><div class="flex-even markdown-inner"><h2 id=processor-view>Processor view</h2><p>When compiled, this loop is translated into (approximately) the
+following sequence of instructions (in assembly &ldquo;pseudo-code&rdquo;)</p><div class=highlight><pre style=color:#272822;background-color:#fafafa><code class=language-asm data-lang=asm><span style=color:#75af00>.top</span>
+<span style=color:#75af00>LOAD</span> <span style=color:#00a8c8>r1</span> <span style=color:#00a8c8>with</span> <span style=color:#00a8c8>a</span><span style=color:#111>[</span><span style=color:#00a8c8>i</span><span style=color:#111>]</span>
+<span style=color:#75af00>LOAD</span> <span style=color:#00a8c8>r2</span> <span style=color:#00a8c8>with</span> <span style=color:#00a8c8>b</span><span style=color:#111>[</span><span style=color:#00a8c8>i</span><span style=color:#111>]</span>
+<span style=color:#75af00>ADD</span> <span style=color:#00a8c8>r2</span> <span style=color:#00a8c8>to</span> <span style=color:#00a8c8>r1</span> <span style=color:#00a8c8>into</span> <span style=color:#00a8c8>r1</span>
+<span style=color:#75af00>STORE</span> <span style=color:#00a8c8>a</span><span style=color:#111>[</span><span style=color:#00a8c8>i</span><span style=color:#111>]</span> <span style=color:#00a8c8>with</span> <span style=color:#00a8c8>r1</span>
+<span style=color:#75af00>INCREMENT</span> <span style=color:#00a8c8>i</span>
+<span style=color:#75af00>GOTO</span> <span style=color:#00a8c8>.top</span> <span style=color:#00a8c8>IF</span> <span style=color:#00a8c8>i</span> <span style=color:#00a8c8>less</span> <span style=color:#00a8c8>than</span> <span style=color:#00a8c8>N</span>
+</code></pre></div><p>So the processor sees the work as \(6 N\) instructions.</p><blockquote class="book-hint info"><span><p>The actual loop, when compiled with GCC looks like this</p><div class=highlight><pre style=color:#272822;background-color:#fafafa><code class=language-asm data-lang=asm><span style=color:#111>.L3:</span>
+<span style=color:#75af00>movsd</span>   <span style=color:#111>(</span><span style=color:#111>%rsi</span><span style=color:#111>,</span><span style=color:#111>%rax</span><span style=color:#111>,</span><span style=color:#ae81ff>8</span><span style=color:#111>),</span> <span style=color:#111>%xmm0</span>
+<span style=color:#75af00>addsd</span>   <span style=color:#111>(</span><span style=color:#111>%rdx</span><span style=color:#111>,</span><span style=color:#111>%rax</span><span style=color:#111>,</span><span style=color:#ae81ff>8</span><span style=color:#111>),</span> <span style=color:#111>%xmm0</span>
+<span style=color:#75af00>movsd</span>   <span style=color:#111>%xmm0</span><span style=color:#111>,</span> <span style=color:#111>(</span><span style=color:#111>%rsi</span><span style=color:#111>,</span><span style=color:#111>%rax</span><span style=color:#111>,</span><span style=color:#ae81ff>8</span><span style=color:#111>)</span>
+<span style=color:#75af00>addq</span>    <span style=color:#00a8c8>$1</span><span style=color:#111>,</span> <span style=color:#111>%rax</span>
+<span style=color:#75af00>cmpq</span>    <span style=color:#111>%rdi</span><span style=color:#111>,</span> <span style=color:#111>%rax</span>
+<span style=color:#75af00>jne</span>     <span style=color:#00a8c8>.L3</span>
+</code></pre></div><p>You can explore this in more detail, if you like, on the <a href=https://gcc.godbolt.org/z/5MqKqr>compiler explorer</a></p></span></blockquote></div></div><h2 id=resource-bottleneck-data-transfers>Resource bottleneck: data transfers
+<a class=anchor href=#resource-bottleneck-data-transfers>#</a></h2><p>From the point of view of instruction execution, data movement (from
+the memory to the CPU and back again) is a <em>consequence</em> of
+instruction execution and therefore considered a secondary resource.
+The throughput is measured in bytes/second (or bandwidth) and is
+determined by two things</p><ol><li>Hardware limitations</li><li>The rate at which load and store instructions (which move data) can
+be executed.</li></ol><p>For example, returning to our simple example and just considering the
+instructions which move memory, we can see that there are three such
+instructions per loop iteration.</p><div class=highlight><pre style=color:#272822;background-color:#fafafa><code class=language-asm data-lang=asm><span style=color:#75af00>LOAD</span> <span style=color:#00a8c8>r1</span> <span style=color:#00a8c8>with</span> <span style=color:#00a8c8>a</span><span style=color:#111>[</span><span style=color:#00a8c8>i</span><span style=color:#111>]</span>
+<span style=color:#75af00>LOAD</span> <span style=color:#00a8c8>r2</span> <span style=color:#00a8c8>with</span> <span style=color:#00a8c8>b</span><span style=color:#111>[</span><span style=color:#00a8c8>i</span><span style=color:#111>]</span>
+<span style=color:#75af00>STORE</span> <span style=color:#00a8c8>a</span><span style=color:#111>[</span><span style=color:#00a8c8>i</span><span style=color:#111>]</span> <span style=color:#00a8c8>with</span> <span style=color:#00a8c8>r1</span>
+</code></pre></div><p>As written, the code adds double precision floating point numbers,
+each of which is 8 bytes. The loop therefore requires 24 bytes of data
+movement per loop iteration.</p><h2 id=understanding-performance-limits>Understanding performance limits
+<a class=anchor href=#understanding-performance-limits>#</a></h2><p>To understand the performance of a code, and more importantly its
+performance <em>limits</em>, we must to first order answer the question</p><blockquote class=question><h3>Question</h3><span>What is the resource bottleneck?</span></blockquote><p>In this simple model it is either data transfer or instruction
+execution. In the rest of the course we&rsquo;ll see how to answer these
+question through a combination of measurements and models.</p><h2 id=real-hardware-and-abstract-models>Real hardware and abstract models
+<a class=anchor href=#real-hardware-and-abstract-models>#</a></h2><p>Programming languages abstract away details of the hardware (for
+example how many registers, or how much memory the chip has). The
+abstract model adopted is the von Neumann model. We logically consider
+a sequential stream of instructions and the abstract hardware
+sequentially executes instructions. In this model each instruction
+completes before the next one starts</p><figure style=width:50%><img class=scaled src=https://teaching.wence.uk/comp52315/images/manual/vonneumann.svg alt="Diagram of the abstract machine model for the von Neumann architecture"><figcaption><p>Diagram of the abstract machine model for the von Neumann architecture</p></figcaption></figure><p>This was a reasonable match with reality when first introduced in the
+1940s, however the hardware in modern CPUs does not match the abstract
+model nearly as well. For a simple example, most instructions in
+modern chips have a <em>latency</em> of more than one clock cycle.</p><blockquote class="book-hint info"><span>To make our discussion independent of the frequency at which a chip is
+executing, we&rsquo;ll count time in terms of clock &ldquo;cycles&rdquo;. For example, a
+1GHz processor runs at one billion cycles per second.</span></blockquote><p>Let&rsquo;s consider our addition loop as a simple example again</p><div class="book-columns flex flex-wrap"><div class="flex-even markdown-inner"><div class=highlight><pre style=color:#272822;background-color:#fafafa><code class=language-asm data-lang=asm><span style=color:#75af00>LOAD</span> <span style=color:#00a8c8>r1</span> <span style=color:#00a8c8>with</span> <span style=color:#00a8c8>a</span><span style=color:#111>[</span><span style=color:#00a8c8>i</span><span style=color:#111>]</span>
+<span style=color:#75af00>LOAD</span> <span style=color:#00a8c8>r2</span> <span style=color:#00a8c8>with</span> <span style=color:#00a8c8>b</span><span style=color:#111>[</span><span style=color:#00a8c8>i</span><span style=color:#111>]</span>
+<span style=color:#75af00>ADD</span> <span style=color:#00a8c8>r2</span> <span style=color:#00a8c8>to</span> <span style=color:#00a8c8>r1</span> <span style=color:#00a8c8>into</span> <span style=color:#00a8c8>r1</span>
+<span style=color:#75af00>STORE</span> <span style=color:#00a8c8>a</span><span style=color:#111>[</span><span style=color:#00a8c8>i</span><span style=color:#111>]</span> <span style=color:#00a8c8>with</span> <span style=color:#00a8c8>r1</span>
+<span style=color:#75af00>INCREMENT</span> <span style=color:#00a8c8>i</span>
+</code></pre></div></div><div class="flex-even markdown-inner"><p>Suppose that our CPU can execute one instruction per cycle. If every
+instruction has a latency of one cycle, then there are no &ldquo;wasted&rdquo;
+cycles in this loop.</p><p>On the other hand, if <code>ADD</code> has a latency of three cycles, then there
+are two wasted cycles when the CPU is doing nothing (between the <code>ADD</code>
+and the <code>STORE</code>). This is shown graphically below.</p></div></div><figure style=width:70%><img class=scaled src=https://teaching.wence.uk/comp52315/images/manual/addlatency.svg alt="Comparison of throughput for different ADD latencies with time (in clock cycles) running from left to right"><figcaption><p>Comparison of throughput for different <code>ADD</code> latencies with time (in clock cycles) running from left to right</p></figcaption></figure><h3 id=strategies-for-faster-chips>Strategies for faster chips
+<a class=anchor href=#strategies-for-faster-chips>#</a></h3><p>Trying to maintain the illusion offered by the abstract model, while
+squeezing more performance out of the actual hardware, has been a
+driving goal in chip design for a while. There are a number of
+different ways this can be achieved with the end goal of increasing
+instruction throughput. The simplest, and nicest for the programmer,
+is to increase clock speed.</p><p>Suppose that I change the base frequency of a chip from 1GHz to 2GHz,
+and leave everything else the same. The instruction throughput
+doubles. This is wonderful for me as a programmer, all the code I
+write just suddenly goes faster.</p><p>Unfortunately, this approach has not really been viable for <a href=http://www.gotw.ca/publications/concurrency-ddj.htm>15
+years</a>. The
+reason is that when I run a chip at higher frequency it generates more
+heat, which must be dissipated. So we&rsquo;ve run into physical limitations
+on cooling.</p><p>What chip designers have been turning to is to provide more
+<em>parallelism</em> on the chip. For example, they can&rsquo;t give you one 4GHz
+CPU, but they can easily give you four 1GHz CPUs. This will have the
+same throughput <em>if</em> there are no dependencies between all the work
+(and you can split it up). Unfortunately, this has moved the problem
+from the hardware designer onto the programmer.</p><h3 id=handling-latency>Handling latency
+<a class=anchor href=#handling-latency>#</a></h3><p>There are some tricks available to the hardware designer that they use
+to increase instruction throughput. These are all examples of how the
+actual hardware is doing something more complicated than the
+abstraction von Neumann model.</p><p>We&rsquo;ll briefly mention three:</p><ol><li><a href=https://en.wikipedia.org/wiki/Superscalar_processor>Superscalar execution</a></li><li><a href=https://en.wikipedia.org/wiki/Instruction_pipelining>Pipelining</a></li><li><a href=https://en.wikipedia.org/wiki/Out-of-order_execution>Out of order execution</a></li></ol><p>Typical CPUs can issue <em>more than one</em> instruction per cycle (modern
+Intel CPUs can issue up to four per cycle). As long are there are no
+data dependencies between instructions, we can therefore increase
+throughput.</p><p>For our simple addition example, the two loads are independent, so
+superscalar execution might look something like the figure below.</p><figure style=width:70%><img class=scaled src=https://teaching.wence.uk/comp52315/images/manual/addsuperscalar.svg alt="Superscalar execution saves one cycle."><figcaption><p>Superscalar execution saves one cycle.</p></figcaption></figure><p>Achieving peak performance actually requires that the code we write
+utilises this facility, we&rsquo;ll see that when we look at floating point
+throughput [later](TODO LINK).</p><p>Another mechanism to fight instruction latency is <em>pipelining</em>. Most
+instructions have a latency of more than one cycle, meaning that if we
+issue and wait for the result, we have lots of wasted cycles. Chips
+therefore tend to have a <em>pipeline</em> for instructions, on the
+assumption that codes will typically issue a large number of
+instructions that are the same (just operating on different data).</p><p>Here&rsquo;s an example with a pipeline of length four. Each individual
+instruction takes four cycles to execute, but we can have four
+instructions &ldquo;in flight&rdquo; simultaneously (in the pipeline). So once the
+pipeline is full, we observe <em>throughput</em> of one instruction per cycle
+(rather than one instruction every four cycles).</p><figure style=width:70%><img class=scaled src=https://teaching.wence.uk/comp52315/images/manual/pipeline.svg alt="Pipelines can hide latency if many identical instructions are issued."><figcaption><p>Pipelines can hide latency if many identical instructions are issued.</p></figcaption></figure><p>Finally, the technique in a hardware designer&rsquo;s toolbox that takes us
+the furthest away from the von Neumann model is that of out-of-order
+execution. Our program feeds in instructions in some order to the CPU
+one at a time, however, the CPU does not typically execute those
+instructions in the order they are provided. Instead, instructions are
+<em>reordered</em> based on availability of input data and execution units
+(while still requiring that data dependencies are obeyed).</p><p>This is a powerful technique to keep execution units busy and avoid
+<code>NOOP</code> bubbles in the instruction stream. As an example, consider two
+iterations of our addition loop, where we recall that the <code>ADD</code>
+instruction has a three cycle latency. By interleaving the
+instructions from the second iteration before the store of the first
+iteration, we can completely hide the <code>ADD</code> latency.</p><figure style=width:70%><img class=scaled src=https://teaching.wence.uk/comp52315/images/manual/addoutoforder.svg alt="Out of order execution hides instruction latency"><figcaption><p>Out of order execution hides instruction latency</p></figcaption></figure><h2 id=data-parallelism>Data parallelism
+<a class=anchor href=#data-parallelism>#</a></h2><p>In this course we will focus almost exclusively on single-core
+performance. The rationale for this is that it single-core and
+multi-core + distributed memory parallelism are somewhat orthogonal.
+It&rsquo;s best to start &ldquo;at the bottom&rdquo;.</p><p>Let&rsquo;s remind ourselves of the problem, we&rsquo;ll take our toy example
+summing arrays</p><div class=highlight><pre style=color:#272822;background-color:#fafafa><code class=language-c data-lang=c><span style=color:#00a8c8>void</span> <span style=color:#75af00>add_arrays</span><span style=color:#111>(</span><span style=color:#00a8c8>int</span> <span style=color:#111>N</span><span style=color:#111>,</span> <span style=color:#00a8c8>double</span> <span style=color:#f92672>*</span> <span style=color:#00a8c8>restrict</span> <span style=color:#111>a</span><span style=color:#111>,</span> <span style=color:#00a8c8>const</span> <span style=color:#00a8c8>double</span> <span style=color:#f92672>*</span> <span style=color:#00a8c8>restrict</span> <span style=color:#111>b</span><span style=color:#111>)</span>
+<span style=color:#111>{</span>
+  <span style=color:#00a8c8>for</span> <span style=color:#111>(</span><span style=color:#00a8c8>int</span> <span style=color:#111>i</span> <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span><span style=color:#111>;</span> <span style=color:#111>i</span> <span style=color:#f92672>&lt;</span> <span style=color:#111>N</span><span style=color:#111>;</span> <span style=color:#111>i</span><span style=color:#f92672>++</span><span style=color:#111>)</span>
+    <span style=color:#111>a</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>]</span> <span style=color:#f92672>=</span> <span style=color:#111>a</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>]</span> <span style=color:#f92672>+</span> <span style=color:#111>b</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>];</span>
+<span style=color:#111>}</span>
+</code></pre></div><p>We&rsquo;ve seen that instruction throughput can be a bottleneck here. One
+way that chip designers have fixed this is to make individual
+instructions operate on more data at once. This is termed
+<em>vectorisation</em>.</p><p>Intel CPUs have vector registers, exactly which ones depends a little
+on the vintage, that are either 128, 256, or 512 bits wide. What does
+this mean?</p><p>If we restrict ourselves to thinking about double precision values
+(which take up 64 bits) then each register can hold between two and
+eight such values. The slots in the register are called <em>vector
+lanes</em>.</p><figure style=width:50%><img class=scaled src=https://teaching.wence.uk/comp52315/images/manual/registerwidth.svg alt="Vector registers, showing slots for double precision values."><figcaption><p>Vector registers, showing slots for double precision values.</p></figcaption></figure><p>The idea is that these registers hold multiple values, and the
+instructions in which they take part operate on multiple values in one
+go.</p><div class="book-columns flex flex-wrap"><div class="flex-even markdown-inner"><h4 id=scalar-addition>Scalar addition</h4><p>Standard scalar operations for this addition loop produce one output
+element per instruction</p><figure style=width:100%><img class=scaled src=https://teaching.wence.uk/comp52315/images/manual/scalaradd.svg></figure></div><div class="flex-even markdown-inner"><h4 id=avx-addition>AVX addition</h4><p>AVX addition (256 bit registers) produces four output elements per
+instruction.</p><figure style=width:100%><img class=scaled src=https://teaching.wence.uk/comp52315/images/manual/vectoradd.svg></figure></div></div><h2 id=putting-things-into-practice>Putting things into practice
+<a class=anchor href=#putting-things-into-practice>#</a></h2><p>With all that, we&rsquo;re now going to look at what this means for the
+execution speed of simple code. <a href=https://teaching.wence.uk/comp52315/exercises/exercise01/>Exercise 1</a> walks through an example of a simple &ldquo;reduction&rdquo;. You can think
+of this as a proxy for computing the dot product of two vectors. We&rsquo;ll
+look at the effect of vectorisation on throughput.</p></article><footer class=book-footer><div class="flex flex-wrap justify-between"><div><a class="flex align-center" href=https://github.com/wenceorg/comp52315/commit/cdfbd8f86c56d4a17e7e322b59a75940cea4fb4e title="Last modified by Lawrence Mitchell | April 7, 2022" target=_blank rel=noopener><img src=/comp52315/svg/calendar.svg class=book-icon alt=Calendar>
+<span>April 7, 2022</span></a></div><div><a class="flex align-center" href=https://github.com/wenceorg/comp52315/edit/main/site/content//notes/introduction.md target=_blank rel=noopener><img src=/comp52315/svg/edit.svg class=book-icon alt=Edit>
+<span>Edit this page</span></a></div></div><div class="flex flex-wrap align-right"><p>© 2020&ndash; <a href=mailto:lawrence.mitchell@durham.ac.uk>Lawrence Mitchell</a> and <a href=https://www.dur.ac.uk/>Durham University</a>.</p><p><a rel=license href=http://creativecommons.org/licenses/by-sa/4.0/><img alt="Creative Commons License" style=border-width:0 src=/comp52315/cc-by-sa.svg></a>
+This work is licensed under a <a rel=license href=http://creativecommons.org/licenses/by-sa/4.0/>Creative
+Commons Attribution-ShareAlike 4.0 International License</a>.</p></div></footer><label for=menu-control class="hidden book-menu-overlay"></label></div><aside class=book-toc><nav id=TableOfContents><ul><li><a href=#resources-in-stored-program-computers>Resources in stored program computers</a><ul><li><a href=#resource-bottleneck-instruction-throughput>Resource bottleneck: instruction throughput</a></li><li><a href=#resource-bottleneck-data-transfers>Resource bottleneck: data transfers</a></li><li><a href=#understanding-performance-limits>Understanding performance limits</a></li><li><a href=#real-hardware-and-abstract-models>Real hardware and abstract models</a><ul><li><a href=#strategies-for-faster-chips>Strategies for faster chips</a></li><li><a href=#handling-latency>Handling latency</a></li></ul></li><li><a href=#data-parallelism>Data parallelism</a></li><li><a href=#putting-things-into-practice>Putting things into practice</a></li></ul></li></ul></nav></aside></main></body></html>

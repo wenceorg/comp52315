@@ -1,0 +1,69 @@
+<!doctype html><html lang=en dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="Measuring memory bandwidth in the memory hierarchy #  The goal is to determine the memory bandwidth as a function of how much data we are moving on the Hamilton cores.
+Again, as for the first exercise we will do this with likwid-bench. This time, however, we will use three different benchmarks
+ clcopy: Double-precision cache line copy, only touches first element of each cache line. clload: Double-precision cache line load, only loads first element of each cache line."><meta name=theme-color content="#FFFFFF"><meta property="og:title" content="Caches"><meta property="og:description" content="Measuring memory bandwidth in the memory hierarchy #  The goal is to determine the memory bandwidth as a function of how much data we are moving on the Hamilton cores.
+Again, as for the first exercise we will do this with likwid-bench. This time, however, we will use three different benchmarks
+ clcopy: Double-precision cache line copy, only touches first element of each cache line. clload: Double-precision cache line load, only loads first element of each cache line."><meta property="og:type" content="article"><meta property="og:url" content="https://teaching.wence.uk/comp52315/exercises/exercise02/"><meta property="article:modified_time" content="2022-04-07T18:18:31+01:00"><title>Caches | COMP52315 – Performance Engineering</title><link rel=icon href=/comp52315/favicon.svg type=image/x-icon><link rel=stylesheet href=/comp52315/book.min.0cb0b7d6a1ed5d0e95321cc15edca4d6e9cc406149d1f4a3f25fd532f6a3bb38.css integrity="sha256-DLC31qHtXQ6VMhzBXtyk1unMQGFJ0fSj8l/VMvajuzg="></head><body dir=ltr><input type=checkbox class="hidden toggle" id=menu-control>
+<input type=checkbox class="hidden toggle" id=toc-control><main class="container flex"><aside class=book-menu><nav><div class=book-brand><img class=book-center src=/comp52315/logo.svg alt=Logo><h2><a href=/comp52315>COMP52315 – Performance Engineering</a></h2></div><ul><li><span>Administrivia</span><ul><li><a href=/comp52315/setup/contact/>Contact details</a></li><li><a href=/comp52315/setup/hamilton/>Hamilton accounts</a></li><li><a href=/comp52315/setup/configuration/>ssh configuration</a></li><li><a href=/comp52315/setup/unix/>Unix resources</a></li></ul></li><li><span>Exercises</span><ul><li><a href=/comp52315/exercises/exercise01/>Sum reductions</a></li><li><a href=/comp52315/exercises/exercise02/ class=active>Caches</a></li><li><a href=/comp52315/exercises/exercise03/>Memory bandwidth</a></li><li><a href=/comp52315/exercises/exercise04/>Roofline analysis</a></li><li><a href=/comp52315/exercises/exercise05/>Models and measurements</a></li><li><a href=/comp52315/exercises/exercise06/>Profiling</a></li><li><a href=/comp52315/exercises/exercise07/>Loop tiling matrix transpose</a></li><li><a href=/comp52315/exercises/exercise08/>Loop tiling matrix-matrix multiplication</a></li><li><a href=/comp52315/exercises/exercise09/>Compiler feedback and the BLIS DGEMM</a></li><li><a href=/comp52315/exercises/exercise10/>Stencil layer conditions</a></li></ul></li><li><span>Notes</span><ul><li><a href=/comp52315/notes/introduction/>Introduction</a></li><li><a href=/comp52315/notes/memory/>The memory hierarchy</a></li><li><a href=/comp52315/notes/roofline/>Performance models: roofline</a></li><li><a href=/comp52315/notes/measurements/>Measurement and profiling</a></li><li><a href=/comp52315/notes/tiling/>Cache blocking/tiling</a></li></ul></li><li><a href=/comp52315/slides/>Slides</a></li><li><a href=/comp52315/coursework/>Coursework: fast finite elements</a><ul></ul></li><li><a href=/comp52315/resources/>Further resources</a></li><li><a href=/comp52315/acknowledgements/>Acknowledgements</a></li><li><span>Past editions</span><ul><li><a href=/comp52315/past-editions/2020-21/>2020/21</a><ul></ul></li></ul></li></ul></nav><script>(function(){var menu=document.querySelector("aside.book-menu nav");addEventListener("beforeunload",function(event){localStorage.setItem("menu.scrollTop",menu.scrollTop);});menu.scrollTop=localStorage.getItem("menu.scrollTop");})();</script></aside><div class=book-page><header class=book-header><div class="flex align-center justify-between"><label for=menu-control><img src=/comp52315/svg/menu.svg class=book-icon alt=Menu></label>
+<strong>Caches</strong>
+<label for=toc-control><img src=/comp52315/svg/toc.svg class=book-icon alt="Table of Contents"></label></div><aside class="hidden clearfix"><nav id=TableOfContents><ul><li><a href=#measuring-memory-bandwidth-in-the-memory-hierarchy>Measuring memory bandwidth in the memory hierarchy</a><ul><li><a href=#setup>Setup</a><ul><li><a href=#logging-in-to-hamilton>Logging in to Hamilton</a></li><li><a href=#running-the-benchmarks>Running the benchmarks</a></li></ul></li></ul></li></ul></nav></aside></header><article class=markdown><blockquote class="book-hint warning"><span>This course page was updated until March 2022 when I left Durham University.
+The materials herein are therefore not necessarily still in date.</span></blockquote><h1 id=measuring-memory-bandwidth-in-the-memory-hierarchy>Measuring memory bandwidth in the memory hierarchy
+<a class=anchor href=#measuring-memory-bandwidth-in-the-memory-hierarchy>#</a></h1><p>The goal is to determine the memory bandwidth as a function of how
+much data we are moving on the Hamilton cores.</p><p>Again, as for <a href=https://teaching.wence.uk/comp52315/exercises/exercise01/>the first exercise</a> we will
+do this with <code>likwid-bench</code>. This time, however, we will use three
+different benchmarks</p><ol><li><code>clcopy</code>: Double-precision cache line copy, only touches first
+element of each cache line.</li><li><code>clload</code>: Double-precision cache line load, only loads first
+element of each cache line.</li><li><code>clstore</code>: Double-precision cache line store, only stores first
+element of each cache line.</li></ol><p>These benchmarks do the minimal amount of work while moving data in
+cache lines (64 bytes at a time), and therefore exercise the memory
+bandwidth bottlenecks (rather than instruction issue or similar).</p><h2 id=setup>Setup
+<a class=anchor href=#setup>#</a></h2><h3 id=logging-in-to-hamilton>Logging in to Hamilton
+<a class=anchor href=#logging-in-to-hamilton>#</a></h3><p>As before, you should do this on a compute node on Hamilton. See the
+<a href=https://teaching.wence.uk/comp52315/exercises/exercise01/#setup-logging-in-to-hamilton>quickstart in exercise 1</a> if you can&rsquo;t
+remember how to do this.</p><h3 id=running-the-benchmarks>Running the benchmarks
+<a class=anchor href=#running-the-benchmarks>#</a></h3><p>As mentioned, this time we want to measure memory bandwidth with the
+<code>clcopy</code>, <code>clload</code>, and <code>clstore</code>
+benchmarks. We&rsquo;re interested in the (highlighted) MByte/s output of
+<code>likwid-bench</code>. For example running <code>likwid-bench -t clcopy -w S0:1kB:1</code> produces output.</p><div class=highlight><pre style=color:#272822;background-color:#fafafa><code class=language-txt data-lang=txt>Allocate: Process running on core 0 (Domain S0) - Vector length 496 Offset 0 Alignment 512
+Allocate: Process running on core 0 (Domain S0) - Vector length 496 Offset 0 Alignment 512
+--------------------------------------------------------------------------------
+LIKWID MICRO BENCHMARK
+Test: clcopy
+--------------------------------------------------------------------------------
+Using 1 work groups
+Using 1 threads
+--------------------------------------------------------------------------------
+Group: 0 Thread 0 Global Thread 0 running on core 0 - Vector length 62 Offset 0
+--------------------------------------------------------------------------------
+Cycles:                 3057482699
+CPU Clock:              2199869128
+Cycle Clock:            2199869128
+Time:                   1.389848e+00 sec
+Iterations:             268435456
+Iterations per thread:  268435456
+Inner loop executions:  2
+Size:                   992
+Size per thread:        992
+Number of Flops:        0
+MFlops/s:               0.00
+Data volume (Byte):     266287972352
+<span style=display:block;width:100%;background-color:#e1e1e1>MByte/s:                191595.10
+</span>Cycles per update:      0.183710
+Cycles per cacheline:   1.469679
+Loads per update:       1
+Stores per update:      1
+Load/store ratio:       1.00
+Instructions:           2952790032
+UOPs:                   3758096384
+--------------------------------------------------------------------------------
+</code></pre></div><blockquote class=exercise><h3>Exercise</h3><span><p>Produce a plot of memory bandwidth as a function of the size vector
+being streamed from 1kB up to 1GB for each of the three different
+benchmarks.</p><p>As before, you can script this data collection with a <a href=https://teaching.wence.uk/comp52315/exercises/exercise01/#scripting-the-data-collection>bash loop</a>.</p></span></blockquote><blockquote class=question><h3>Question</h3><span>What do you observe about the available memory bandwidth? Is the
+bandwidth the same for 1kB and 1GB vectors?</span></blockquote><p><blockquote class=exercise><h3>Exercise</h3><span>Use <code>likwid-topology</code> to find out about the
+different sizes of cache available on the system. You can find
+out how to use it by providing the <code>-h</code>
+command-line flag. The graphical output is most useful.</span></blockquote><blockquote class=question><h3>Question</h3><span>Can you use the output from <code>likwid-topology</code> to explain and
+understand your memory bandwidth results?</span></blockquote></p></article><footer class=book-footer><div class="flex flex-wrap justify-between"><div><a class="flex align-center" href=https://github.com/wenceorg/comp52315/commit/cdfbd8f86c56d4a17e7e322b59a75940cea4fb4e title="Last modified by Lawrence Mitchell | April 7, 2022" target=_blank rel=noopener><img src=/comp52315/svg/calendar.svg class=book-icon alt=Calendar>
+<span>April 7, 2022</span></a></div><div><a class="flex align-center" href=https://github.com/wenceorg/comp52315/edit/main/site/content//exercises/exercise02.md target=_blank rel=noopener><img src=/comp52315/svg/edit.svg class=book-icon alt=Edit>
+<span>Edit this page</span></a></div></div><div class="flex flex-wrap align-right"><p>© 2020&ndash; <a href=mailto:lawrence.mitchell@durham.ac.uk>Lawrence Mitchell</a> and <a href=https://www.dur.ac.uk/>Durham University</a>.</p><p><a rel=license href=http://creativecommons.org/licenses/by-sa/4.0/><img alt="Creative Commons License" style=border-width:0 src=/comp52315/cc-by-sa.svg></a>
+This work is licensed under a <a rel=license href=http://creativecommons.org/licenses/by-sa/4.0/>Creative
+Commons Attribution-ShareAlike 4.0 International License</a>.</p></div></footer><label for=menu-control class="hidden book-menu-overlay"></label></div><aside class=book-toc><nav id=TableOfContents><ul><li><a href=#measuring-memory-bandwidth-in-the-memory-hierarchy>Measuring memory bandwidth in the memory hierarchy</a><ul><li><a href=#setup>Setup</a><ul><li><a href=#logging-in-to-hamilton>Logging in to Hamilton</a></li><li><a href=#running-the-benchmarks>Running the benchmarks</a></li></ul></li></ul></li></ul></nav></aside></main></body></html>

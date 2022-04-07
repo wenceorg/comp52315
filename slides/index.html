@@ -1,0 +1,113 @@
+<!doctype html><html lang=en dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="Slides 2021/22 edition #  Slides for the live lectures. These will be augmented with annotated versions, links to recordings, and some short commentary after the fact. If you think you should have access to the recordings but don&rsquo;t, please get in touch.
+The long form notes add words in between the bullet points.
+  Session 1, annotated, video.
+We introduced some ideas of computer architecture and talked about the motivation for the course."><meta name=theme-color content="#FFFFFF"><meta property="og:title" content="Slides"><meta property="og:description" content="Slides 2021/22 edition #  Slides for the live lectures. These will be augmented with annotated versions, links to recordings, and some short commentary after the fact. If you think you should have access to the recordings but don&rsquo;t, please get in touch.
+The long form notes add words in between the bullet points.
+  Session 1, annotated, video.
+We introduced some ideas of computer architecture and talked about the motivation for the course."><meta property="og:type" content="article"><meta property="og:url" content="https://teaching.wence.uk/comp52315/slides/"><meta property="article:modified_time" content="2022-04-07T18:18:31+01:00"><title>Slides | COMP52315 – Performance Engineering</title><link rel=icon href=/comp52315/favicon.svg type=image/x-icon><link rel=stylesheet href=/comp52315/book.min.0cb0b7d6a1ed5d0e95321cc15edca4d6e9cc406149d1f4a3f25fd532f6a3bb38.css integrity="sha256-DLC31qHtXQ6VMhzBXtyk1unMQGFJ0fSj8l/VMvajuzg="></head><body dir=ltr><input type=checkbox class="hidden toggle" id=menu-control>
+<input type=checkbox class="hidden toggle" id=toc-control><main class="container flex"><aside class=book-menu><nav><div class=book-brand><img class=book-center src=/comp52315/logo.svg alt=Logo><h2><a href=/comp52315>COMP52315 – Performance Engineering</a></h2></div><ul><li><span>Administrivia</span><ul><li><a href=/comp52315/setup/contact/>Contact details</a></li><li><a href=/comp52315/setup/hamilton/>Hamilton accounts</a></li><li><a href=/comp52315/setup/configuration/>ssh configuration</a></li><li><a href=/comp52315/setup/unix/>Unix resources</a></li></ul></li><li><span>Exercises</span><ul><li><a href=/comp52315/exercises/exercise01/>Sum reductions</a></li><li><a href=/comp52315/exercises/exercise02/>Caches</a></li><li><a href=/comp52315/exercises/exercise03/>Memory bandwidth</a></li><li><a href=/comp52315/exercises/exercise04/>Roofline analysis</a></li><li><a href=/comp52315/exercises/exercise05/>Models and measurements</a></li><li><a href=/comp52315/exercises/exercise06/>Profiling</a></li><li><a href=/comp52315/exercises/exercise07/>Loop tiling matrix transpose</a></li><li><a href=/comp52315/exercises/exercise08/>Loop tiling matrix-matrix multiplication</a></li><li><a href=/comp52315/exercises/exercise09/>Compiler feedback and the BLIS DGEMM</a></li><li><a href=/comp52315/exercises/exercise10/>Stencil layer conditions</a></li></ul></li><li><span>Notes</span><ul><li><a href=/comp52315/notes/introduction/>Introduction</a></li><li><a href=/comp52315/notes/memory/>The memory hierarchy</a></li><li><a href=/comp52315/notes/roofline/>Performance models: roofline</a></li><li><a href=/comp52315/notes/measurements/>Measurement and profiling</a></li><li><a href=/comp52315/notes/tiling/>Cache blocking/tiling</a></li></ul></li><li><a href=/comp52315/slides/ class=active>Slides</a></li><li><a href=/comp52315/coursework/>Coursework: fast finite elements</a><ul></ul></li><li><a href=/comp52315/resources/>Further resources</a></li><li><a href=/comp52315/acknowledgements/>Acknowledgements</a></li><li><span>Past editions</span><ul><li><a href=/comp52315/past-editions/2020-21/>2020/21</a><ul></ul></li></ul></li></ul></nav><script>(function(){var menu=document.querySelector("aside.book-menu nav");addEventListener("beforeunload",function(event){localStorage.setItem("menu.scrollTop",menu.scrollTop);});menu.scrollTop=localStorage.getItem("menu.scrollTop");})();</script></aside><div class=book-page><header class=book-header><div class="flex align-center justify-between"><label for=menu-control><img src=/comp52315/svg/menu.svg class=book-icon alt=Menu></label>
+<strong>Slides</strong>
+<label for=toc-control><img src=/comp52315/svg/toc.svg class=book-icon alt="Table of Contents"></label></div><aside class="hidden clearfix"><nav id=TableOfContents><ul><li><a href=#slides-202122-edition>Slides 2021/22 edition</a></li></ul></nav></aside></header><article class=markdown><blockquote class="book-hint warning"><span>This course page was updated until March 2022 when I left Durham University.
+The materials herein are therefore not necessarily still in date.</span></blockquote><h1 id=slides-202122-edition>Slides 2021/22 edition
+<a class=anchor href=#slides-202122-edition>#</a></h1><p>Slides for the live lectures. These will be augmented with annotated
+versions, links to recordings, and some short commentary after the
+fact. If you think you should have access to the recordings but don&rsquo;t,
+please <a href=%28mailto:lawrence.mitchell@durham.ac.uk%29>get in touch</a>.</p><p>The long form notes add words in between the bullet points.</p><ul><li><p><a href=https://teaching.wence.uk/comp52315/lecture-slides/01.pdf>Session 1</a>,
+<a href=https://teaching.wence.uk/comp52315/lecture-slides/2021-22/01.pdf>annotated</a>,
+<a href="https://durham.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=052e8585-00a0-444a-829a-ae1900b6870e">video</a>.</p><p>We introduced some ideas of computer architecture and talked about
+the motivation for the course. There is a focus on trying to build
+predictive models for the speed that code runs at.</p><p>We finished by working through the <a href=https://teaching.wence.uk/comp52315/exercises/exercise01/>first exercise</a> in the round. But did not quite finish. Have a
+go at <a href=https://teaching.wence.uk/comp52315/exercises/exercise01/#vector-size>producing the plots</a>
+the last part of the exercise requires of you. We will discuss the
+results in the next session</p></li><li><p><a href=https://teaching.wence.uk/comp52315/lecture-slides/02.pdf>Session 2</a>,
+<a href=https://teaching.wence.uk/comp52315/lecture-slides/2021-22/02.pdf>annotated</a>,
+<a href="https://durham.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=deba6d06-5908-49af-bf74-ae1a0143da57">video</a>.</p><p>I realised while we were doing the second exercise why I couldn&rsquo;t
+reproduce the plot from the slides. I started at 1024kB, rather than
+1kB. I should have looped from <code>seq 0 17</code> rather than <code>seq 10 17</code>.
+The corrected script to collect all the data we need is</p><div class=highlight><pre style=color:#272822;background-color:#fafafa><code class=language-sh data-lang=sh><span style=color:#75715e>#!/bin/bash
+</span><span style=color:#75715e></span>  
+<span style=color:#75715e># 1 core</span>
+<span style=color:#75715e>#SBATCH -n 1</span>
+<span style=color:#75715e>#SBATCH --job-name=&#34;collect-bw&#34;</span>
+<span style=color:#75715e>#SBATCH -o collect-bw.%J.out</span>
+<span style=color:#75715e>#SBATCH -e collect-bw.%J.err</span>
+<span style=color:#75715e>#SBATCH -t 00:20:00</span>
+<span style=color:#75715e>#SBATCH -p par7.q</span>
+  
+<span style=color:#111>source</span> /etc/profile.d/modules.sh
+  
+module load likwid/5.0.1
+  
+<span style=color:#00a8c8>for</span> n in <span style=color:#00a8c8>$(</span>seq <span style=color:#ae81ff>0</span> 17<span style=color:#00a8c8>)</span>
+<span style=color:#00a8c8>do</span>
+    <span style=color:#111>size</span><span style=color:#f92672>=</span><span style=color:#00a8c8>$((</span><span style=color:#ae81ff>2</span> <span style=color:#f92672>**</span> n<span style=color:#00a8c8>))</span>
+    <span style=color:#111>mflops_scalar</span><span style=color:#f92672>=</span><span style=color:#00a8c8>$(</span>likwid-bench -t sum_sp -w S0:<span style=color:#d88200>${</span><span style=color:#111>size</span><span style=color:#d88200>}</span>kB:1 2&gt;/dev/null <span style=color:#111>|</span> grep MFlops/s <span style=color:#111>|</span> cut -f 3<span style=color:#00a8c8>)</span>
+    <span style=color:#111>mflops_avx</span><span style=color:#f92672>=</span><span style=color:#00a8c8>$(</span>likwid-bench -t sum_sp_avx -w S0:<span style=color:#d88200>${</span><span style=color:#111>size</span><span style=color:#d88200>}</span>kB:1 2&gt;/dev/null <span style=color:#111>|</span> grep MFlops/s <span style=color:#111>|</span> cut -f 3<span style=color:#00a8c8>)</span>
+    <span style=color:#111>echo</span> <span style=color:#111>$size</span> <span style=color:#111>$mflops_scalar</span> <span style=color:#111>$mflops_avx</span>
+<span style=color:#00a8c8>done</span>
+</code></pre></div><p>We didn&rsquo;t quite finish all of the slides, so we&rsquo;ll pick up where we
+left off and use the results of the second exercise to build a
+predictive model for the performance of the vectorised sum reduction
+at the beginning of the next session.</p></li><li><p><a href=https://teaching.wence.uk/comp52315/lecture-slides/03.pdf>Session 3</a>,
+<a href=https://teaching.wence.uk/comp52315/lecture-slides/2021-22/03.pdf>annotated</a>,
+<a href="https://durham.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=4f7435e0-1b80-4bd6-a9a3-ae2000c78ca7">video</a>.</p><p>We used the results of our benchmarking of the cache hierarchy to
+construct a model for how fast the sum reductions should run as a
+function of the vector size. It works pretty well! This was the end
+of slides from session 2, I have updated the annotated version
+above. Then I talked, probably for a bit long (sorry), about memory
+bandwidth, resource restrictions and some philosophy of how to go
+about thinking about optimising code.</p><p>We finished by talking about the <a href=https://en.wikipedia.org/wiki/Roofline_model>roofline
+model</a>,
+introduced in <a href=https://people.eecs.berkeley.edu/~kubitron/cs252/handouts/papers/RooflineVyNoYellow.pdf>Williams, Waterman, and Patterson
+(2009)</a>.
+Please read this paper before the session tomorrow and note any
+questions or discussion points you might have on it, we&rsquo;ll read
+through the paper in class and discuss it further then.</p></li><li><p><a href=https://teaching.wence.uk/comp52315/lecture-slides/04.pdf>Session 4</a>,
+<a href=https://teaching.wence.uk/comp52315/lecture-slides/2021-22/04.pdf>annotated</a>,
+<a href=https://teaching.wence.uk/comp52315/lecture-slides/2021-22/williams2009-roofline.pdf>annotated roofline paper</a>, <a href="https://durham.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=a5d68405-a795-42c3-bc7b-ae21014beb02">video</a></p><p>We spent the first half of the session going over the roofline paper
+and pointing out some key ideas.</p><p>Then I started talking about performance counters and how to access
+them. We finished by trying to confirm our hypotheses about some
+simple stream code and how many loads and stores we would observe.
+We didn&rsquo;t manage to do so in all cases, so we&rsquo;ll try and figure
+things out next time.</p></li><li><p><a href=https://teaching.wence.uk/comp52315/lecture-slides/05.pdf>Session 5</a>,
+<a href=https://teaching.wence.uk/comp52315/lecture-slides/2021-22/04.pdf>annotated</a>,
+<a href="https://durham.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=b584f983-febd-4969-b691-ae2700c4eab1">video</a></p><p>We didn&rsquo;t make it very far through the session five slides, but did
+finish session four on profiling (annotated slides above updated).
+The low-level profiling toolkit on Linux-based systems is
+<a href=https://perf.wiki.kernel.org/index.php/Main_Page>perf</a>, and
+<a href=https://www.brendangregg.com/>Brendan Gregg</a> has <a href=https://www.brendangregg.com/perf.html>many
+examples</a>.</p><p>We figured out what was going on with our measurements of memory
+loads and stores for the simple example of <a href=https://teaching.wence.uk/comp52315/exercises/exercise05/>exercise 5</a>. We needed to convince the compiler
+to do the right thing in terms of the code it emitted, by adding
+<code>-fno-inline -march=native</code> to the compile flags: I have updated the
+exercise instructions.</p></li><li><p><a href=https://teaching.wence.uk/comp52315/lecture-slides/06.pdf>Session 6 (didn&rsquo;t get to these slides)</a>, <a href=https://teaching.wence.uk/comp52315/lecture-slides/2021-22/05.pdf>updated
+annotated session 5 slides</a>
+<a href="https://durham.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=d7309aaa-c6c8-4b31-96b7-ae280132de5c">video</a>.</p><p>We went through cache blocking/loop tiling in more detail, and
+constructed a model for how dense matrix-matrix multiplication might
+perform. I left the part of the video in the middle where I did one
+of the exercises so you can observe my process if you like (I didn&rsquo;t
+submit to the batch system because I was a bad person).</p><p>For next time, we&rsquo;ll look at data layout transformations and
+vectorisation, please read through <a href=https://web.cs.ucla.edu/~pouchet/doc/cc-article.11.pdf>Henretty et al. (2011), <em>Data Layout
+Transformation for Stencil Computations on Short-Vector SIMD
+Architectures</em></a>
+and think of any questions or comments you might have about it for
+next time: we&rsquo;ll go through this paper and the session 6 slides on
+Monday. You might also find glancing at the sesion 7 slides helpful
+for the paper reading.</p></li><li><p>Session 7: <a href=https://teaching.wence.uk/comp52315/lecture-slides/2021-22/06.pdf>annotated session 6 slides</a>,
+<a href=https://teaching.wence.uk/comp52315/lecture-slides/2021-22/stencil-data-layout.pdf>annotated Henretty (2011) paper</a>
+<a href="https://durham.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=6d609469-e249-4ae5-a362-ae2e00c4d672">video</a></p><p>We talked about data layout transformations and vectorisation, and
+then read through the paper on data layout transformations for
+stencil computations. The main idea is that it is sometimes
+possible, and preferable to restructure both the code <em>and</em> data to
+permit more efficient vectorisation. The key ideas in the paper are
+also covered in the <a href=https://teaching.wence.uk/comp52315/lecture-slides/07.pdf>session 7 slides</a>, which we didn&rsquo;t go over in class.</p></li><li><p>Session 8 <a href=https://teaching.wence.uk/comp52315/lecture-slides/2021-22/08.pdf>scribbles</a>,
+<a href="https://durham.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=fff86be1-ecf5-4629-b3df-ae2f0129effe">video</a></p><p>I talked a little about the computational model in the finite
+element method (which forms the basis of the code that we&rsquo;re looking
+at in the <a href=https://teaching.wence.uk/comp52315/coursework/>coursework</a>. In particular
+focusing on how much compute and how much data movement happens.</p><p>If you run on
+<a href=https://www.dur.ac.uk/arc/hamilton/migration/>Hamilton8</a> <code>likwid</code>
+is still available (contrary to what I stated live).</p></li></ul></article><footer class=book-footer><div class="flex flex-wrap justify-between"><div><a class="flex align-center" href=https://github.com/wenceorg/comp52315/commit/cdfbd8f86c56d4a17e7e322b59a75940cea4fb4e title="Last modified by Lawrence Mitchell | April 7, 2022" target=_blank rel=noopener><img src=/comp52315/svg/calendar.svg class=book-icon alt=Calendar>
+<span>April 7, 2022</span></a></div><div><a class="flex align-center" href=https://github.com/wenceorg/comp52315/edit/main/site/content//slides.md target=_blank rel=noopener><img src=/comp52315/svg/edit.svg class=book-icon alt=Edit>
+<span>Edit this page</span></a></div></div><div class="flex flex-wrap align-right"><p>© 2020&ndash; <a href=mailto:lawrence.mitchell@durham.ac.uk>Lawrence Mitchell</a> and <a href=https://www.dur.ac.uk/>Durham University</a>.</p><p><a rel=license href=http://creativecommons.org/licenses/by-sa/4.0/><img alt="Creative Commons License" style=border-width:0 src=/comp52315/cc-by-sa.svg></a>
+This work is licensed under a <a rel=license href=http://creativecommons.org/licenses/by-sa/4.0/>Creative
+Commons Attribution-ShareAlike 4.0 International License</a>.</p></div></footer><label for=menu-control class="hidden book-menu-overlay"></label></div><aside class=book-toc><nav id=TableOfContents><ul><li><a href=#slides-202122-edition>Slides 2021/22 edition</a></li></ul></nav></aside></main></body></html>

@@ -1,0 +1,168 @@
+<!doctype html><html lang=en dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="Benchmarking"><meta name=theme-color content="#FFFFFF"><meta property="og:title" content="Sum reductions"><meta property="og:description" content="Benchmarking"><meta property="og:type" content="article"><meta property="og:url" content="https://teaching.wence.uk/comp52315/exercises/exercise01/"><meta property="article:modified_time" content="2022-04-07T18:18:31+01:00"><title>Sum reductions | COMP52315 – Performance Engineering</title><link rel=icon href=/comp52315/favicon.svg type=image/x-icon><link rel=stylesheet href=/comp52315/book.min.0cb0b7d6a1ed5d0e95321cc15edca4d6e9cc406149d1f4a3f25fd532f6a3bb38.css integrity="sha256-DLC31qHtXQ6VMhzBXtyk1unMQGFJ0fSj8l/VMvajuzg="><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css integrity=sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X crossorigin=anonymous><script defer src=https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.js integrity=sha384-g7c+Jr9ZivxKLnZTDUhnkOnsh30B4H0rpLUpJ4jAIKs4fnJI+sEnkvrMWph2EDg4 crossorigin=anonymous></script><script defer src=https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/contrib/auto-render.min.js integrity=sha384-mll67QQFJfxn0IYznZYonOWZ644AWYC+Pt2cHqMaRhXVrursRwvLnLaebdGIlYNa crossorigin=anonymous></script><script>document.addEventListener("DOMContentLoaded",function(){renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false},{left:"\\(",right:"\\)",display:false},{left:"\\[",right:"\\]",display:true}]})});</script></head><body dir=ltr><input type=checkbox class="hidden toggle" id=menu-control>
+<input type=checkbox class="hidden toggle" id=toc-control><main class="container flex"><aside class=book-menu><nav><div class=book-brand><img class=book-center src=/comp52315/logo.svg alt=Logo><h2><a href=/comp52315>COMP52315 – Performance Engineering</a></h2></div><ul><li><span>Administrivia</span><ul><li><a href=/comp52315/setup/contact/>Contact details</a></li><li><a href=/comp52315/setup/hamilton/>Hamilton accounts</a></li><li><a href=/comp52315/setup/configuration/>ssh configuration</a></li><li><a href=/comp52315/setup/unix/>Unix resources</a></li></ul></li><li><span>Exercises</span><ul><li><a href=/comp52315/exercises/exercise01/ class=active>Sum reductions</a></li><li><a href=/comp52315/exercises/exercise02/>Caches</a></li><li><a href=/comp52315/exercises/exercise03/>Memory bandwidth</a></li><li><a href=/comp52315/exercises/exercise04/>Roofline analysis</a></li><li><a href=/comp52315/exercises/exercise05/>Models and measurements</a></li><li><a href=/comp52315/exercises/exercise06/>Profiling</a></li><li><a href=/comp52315/exercises/exercise07/>Loop tiling matrix transpose</a></li><li><a href=/comp52315/exercises/exercise08/>Loop tiling matrix-matrix multiplication</a></li><li><a href=/comp52315/exercises/exercise09/>Compiler feedback and the BLIS DGEMM</a></li><li><a href=/comp52315/exercises/exercise10/>Stencil layer conditions</a></li></ul></li><li><span>Notes</span><ul><li><a href=/comp52315/notes/introduction/>Introduction</a></li><li><a href=/comp52315/notes/memory/>The memory hierarchy</a></li><li><a href=/comp52315/notes/roofline/>Performance models: roofline</a></li><li><a href=/comp52315/notes/measurements/>Measurement and profiling</a></li><li><a href=/comp52315/notes/tiling/>Cache blocking/tiling</a></li></ul></li><li><a href=/comp52315/slides/>Slides</a></li><li><a href=/comp52315/coursework/>Coursework: fast finite elements</a><ul></ul></li><li><a href=/comp52315/resources/>Further resources</a></li><li><a href=/comp52315/acknowledgements/>Acknowledgements</a></li><li><span>Past editions</span><ul><li><a href=/comp52315/past-editions/2020-21/>2020/21</a><ul></ul></li></ul></li></ul></nav><script>(function(){var menu=document.querySelector("aside.book-menu nav");addEventListener("beforeunload",function(event){localStorage.setItem("menu.scrollTop",menu.scrollTop);});menu.scrollTop=localStorage.getItem("menu.scrollTop");})();</script></aside><div class=book-page><header class=book-header><div class="flex align-center justify-between"><label for=menu-control><img src=/comp52315/svg/menu.svg class=book-icon alt=Menu></label>
+<strong>Sum reductions</strong>
+<label for=toc-control><img src=/comp52315/svg/toc.svg class=book-icon alt="Table of Contents"></label></div><aside class="hidden clearfix"><nav id=TableOfContents><ul><li><a href=#benchmarking-with-likwid-bench>Benchmarking with <code>likwid-bench</code></a><ul><li><a href=#overview>Overview</a></li><li><a href=#setup-logging-in-to-hamilton>Setup: logging in to Hamilton</a><ul><li><a href=#using-the-batch-system>Using the batch system</a></li></ul></li><li><a href=#using-likwid-bench>Using <code>likwid-bench</code></a><ul><li><a href=#an-example-benchmark>An example benchmark</a></li></ul></li></ul></li></ul></nav></aside></header><article class=markdown><blockquote class="book-hint warning"><span>This course page was updated until March 2022 when I left Durham University.
+The materials herein are therefore not necessarily still in date.</span></blockquote><h1 id=benchmarking-with-likwid-bench>Benchmarking with <code>likwid-bench</code>
+<a class=anchor href=#benchmarking-with-likwid-bench>#</a></h1><h2 id=overview>Overview
+<a class=anchor href=#overview>#</a></h2><p>We&rsquo;re going to look at the throughput of a very simple piece of code</p><div class=highlight><pre style=color:#272822;background-color:#fafafa><code class=language-c data-lang=c><span style=color:#00a8c8>float</span> <span style=color:#75af00>reduce</span><span style=color:#111>(</span><span style=color:#00a8c8>int</span> <span style=color:#111>N</span><span style=color:#111>,</span> <span style=color:#00a8c8>const</span> <span style=color:#00a8c8>double</span> <span style=color:#f92672>*</span><span style=color:#00a8c8>restrict</span> <span style=color:#111>a</span><span style=color:#111>)</span>
+<span style=color:#111>{</span>
+  <span style=color:#00a8c8>float</span> <span style=color:#111>c</span> <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span><span style=color:#111>;</span>
+  <span style=color:#00a8c8>for</span> <span style=color:#111>(</span><span style=color:#00a8c8>int</span> <span style=color:#111>i</span> <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span><span style=color:#111>;</span> <span style=color:#111>i</span> <span style=color:#f92672>&lt;</span> <span style=color:#111>N</span><span style=color:#111>;</span> <span style=color:#111>i</span><span style=color:#f92672>++</span><span style=color:#111>)</span>
+    <span style=color:#111>c</span> <span style=color:#f92672>+=</span> <span style=color:#111>a</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>];</span>
+  <span style=color:#00a8c8>return</span> <span style=color:#111>c</span><span style=color:#111>;</span>
+<span style=color:#111>}</span>
+</code></pre></div><p>when all of the data live in L1 cache.</p><p>We&rsquo;ll do so on an AVX-capable core (where the single-precision vector
+width is 8).</p><p>There is a loop-carried dependency on the summation variable, so
+without [unrolling](TODO LINK LATER), the execution stalls at every
+add until the previous one completes.</p><p>Assembly pseudo-code looks something like</p><div class="book-columns flex flex-wrap"><div class="flex-even markdown-inner"><h4 id=scalar-code>Scalar code</h4><pre><code>LOAD r1.0 ← 0
+i ← 0
+loop:
+  LOAD r2.0 ← a[i]
+  ADD r1.0 ← r1.0 + r2.0
+  i ← i + 1
+  if i &lt; N: loop
+result ← r1.0
+</code></pre></div><div class="flex-even markdown-inner"><h4 id=vector-code>Vector code</h4><pre><code>LOAD [r1.0, ..., r1.7] ← 0
+i ← 0
+loop:
+  LOAD [r2.0, ..., r2.7] ← [a[i], ..., a[i+7]]
+  ADD r1 ← r1 + r2 ; SIMD ADD
+  i ← i + 8
+  if i &lt; N: loop
+result ← r1.0 + r1.1 + ... + r1.7
+</code></pre></div></div><p>Reading the Intel documentation, <code>ADD</code> instructions have a latency of
+one cycle. So we expect the scalar code to run at \(\frac{1}{8}\)th
+of the <code>ADD</code> peak.</p><p>The goal of this exercise is to verify this claim.</p><p>In addition, it will give you an opportunity to gain familiarity with
+some of the <a href=https://github.com/RRZE-HPC/likwid/wiki>likwid</a> tools
+that will reappear throughout the course.</p><h2 id=setup-logging-in-to-hamilton>Setup: logging in to Hamilton
+<a class=anchor href=#setup-logging-in-to-hamilton>#</a></h2><p>Likwid is installed on the <a href=https://www.dur.ac.uk/cis/local/hpc/>Hamilton
+cluster</a>. Log in with</p><pre><code>ssh yourusername@hamilton.dur.ac.uk
+</code></pre><blockquote class="book-hint info"><span>See the <a href=https://teaching.wence.uk/comp52315/setup/configuration/>tips & tricks</a> advice for
+simplifying this process.</span></blockquote><h3 id=using-the-batch-system>Using the batch system
+<a class=anchor href=#using-the-batch-system>#</a></h3><p>Hamilton is typical of a supercomputing cluster, in that the login (or
+&ldquo;frontend&rdquo;) node is shared between all users, and you use a batch
+system to request resources and execute your code on the compute
+nodes.</p><p><strong>DO NOT</strong> do benchmarking on the frontend (login) nodes for two reasons</p><ol><li>We do not want to overload them</li><li>Because other people are also using them, any results you get are
+potentially highly variable (depending on what else is running at the
+time).</li></ol><p>Instead you either need to run a batch script that executes your
+commands, or else request an interactive terminal on a compute node.
+For details see the quickstart guide on DUO (as part of Core I), and
+the <a href=https://www.dur.ac.uk/cis/local/hpc/hamilton/slurm/>Hamilton
+documentation</a>.</p><p>To request an interactive node, run</p><pre><code>srun --pty $SHELL
+</code></pre><p>Note that Hamilton has a limited number of interactive compute nodes.
+If too many people are using them, this command will wait until one
+becomes available. You can cancel the command with
+<kbd>control-c</kbd>. The alternative to using an interactive job is
+to use a batch job, where you write a shell script that runs the
+commands and submit it with <code>sbatch</code>. The Hamilton documentation has
+some <a href=https://www.dur.ac.uk/cis/local/hpc/hamilton/slurm-v2/templates/>template scripts you can
+copy</a>,
+the serial script is probably a good start.</p><p>Hamilton uses the
+<a href=https://www.dur.ac.uk/cis/local/hpc/hamilton/modules/>module</a> system
+to provide access to software. To gain access to the <a href=https://hpc.fau.de/research/tools/likwid/>likwid tools</a>, we
+need to run</p><pre><code>module load likwid/5.0.1
+</code></pre><blockquote class="book-hint info"><span>If you run in batch mode, you should execute this command as part of
+the batch script. In interactive mode, you need to load the module
+each time you request a new interactive job.</span></blockquote><h2 id=using-likwid-bench>Using <code>likwid-bench</code>
+<a class=anchor href=#using-likwid-bench>#</a></h2><p>Verify that you have correctly loaded the likwid module by running
+<code>likwid-bench -h</code>. You should see output like the following</p><pre><code>Threaded Memory Hierarchy Benchmark --  Version  5.0
+
+
+Supported Options:
+-h       Help message
+-a       List available benchmarks
+-d       Delimiter used for physical core list (default ,)
+-p       List available thread domains
+         or the physical ids of the cores selected by the -c expression
+-s &lt;TIME&gt;    Seconds to run the test minimally (default 1)
+         If resulting iteration count is below 10, it is normalized to 10.
+-i &lt;ITERS&gt;   Specify the number of iterations per thread manually.
+-l &lt;TEST&gt;    list properties of benchmark
+-t &lt;TEST&gt;    type of test
+-w       &lt;thread_domain&gt;:&lt;size&gt;[:&lt;num_threads&gt;[:&lt;chunk size&gt;:&lt;stride&gt;]-&lt;streamId&gt;:&lt;domain_id&gt;[:&lt;offset&gt;]
+-W       &lt;thread_domain&gt;:&lt;size&gt;[:&lt;num_threads&gt;[:&lt;chunk size&gt;:&lt;stride&gt;]]
+         &lt;size&gt; in kB, MB or GB (mandatory)
+For dynamically loaded benchmarks
+-f &lt;PATH&gt;    Specify a folder for the temporary files. default: /tmp
+
+Difference between -w and -W :
+-w allocates the streams in the thread_domain with one thread and support placement of streams
+-W allocates the streams chunk-wise by each thread in the thread_domain
+
+Usage:
+# Run the store benchmark on all CPUs of the system with a vector size of 1 GB
+likwid-bench -t store -w S0:1GB
+# Run the copy benchmark on one CPU at CPU socket 0 with a vector size of 100kB
+likwid-bench -t copy -w S0:100kB:1
+# Run the copy benchmark on one CPU at CPU socket 0 with a vector size of 100MB but place one stream on CPU socket 1
+likwid-bench -t copy -w S0:100MB:1-0:S0,1:S1
+</code></pre><h3 id=an-example-benchmark>An example benchmark
+<a class=anchor href=#an-example-benchmark>#</a></h3><p><code>likwid-bench</code> has <a href=https://github.com/RRZE-HPC/likwid/wiki/Likwid-Bench>detailed
+documentation</a>
+but for this exercise we just need a little bit of information.</p><p>We are going to run the <code>sum_sp</code> and
+<code>sum_sp_avx</code> benchmarks. The former runs the scalar
+single-precision sum reduction from the lecture, the latter runs the
+SIMD sum reduction. We just need to choose the correct setting for the
+<code>-w</code> argument.</p><p>Recall that our goal is to measure
+single-thread performance of in-cache operations. We therefore need a
+small vector size, 16kB suffices, and want to request just a single
+thread. We therefore want <code>-w -S0:16kB:1</code>.</p><p>This requests a benchmark running on socket 0, for a vector of length
+16kB (4000 single-precision entries), and one thread.</p><blockquote class="book-hint info"><span>Later we will see how I determined that 16kB was an appropriate size
+(and that socket 0 was ok).</span></blockquote><p>Running the command <code>likwid-bench -t sum_sp -w S0:16kB:1</code> you should
+see output like the following</p><div class=highlight><pre style=color:#272822;background-color:#fafafa><code class=language-txt data-lang=txt>Allocate: Process running on core 0 (Domain S0) - Vector length 16000 Offset 0 Alignment 1024
+--------------------------------------------------------------------------------
+LIKWID MICRO BENCHMARK
+Test: sum_sp
+--------------------------------------------------------------------------------
+Using 1 work groups
+Using 1 threads
+--------------------------------------------------------------------------------
+Group: 0 Thread 0 Global Thread 0 running on core 0 - Vector length 4000 Offset 0
+--------------------------------------------------------------------------------
+Cycles:                 3187585613
+CPU Clock:              2199965642
+Cycle Clock:            2199965642
+Time:                   1.448925e+00 sec
+Iterations:             1048576
+Iterations per thread:  1048576
+Inner loop executions:  1000
+Size:                   16000
+Size per thread:        16000
+Number of Flops:        4194304000
+<span style=display:block;width:100%;background-color:#e1e1e1>MFlops/s:               2894.77
+</span>Data volume (Byte):     16777216000
+MByte/s:                11579.08
+Cycles per update:      0.759980
+Cycles per cacheline:   12.159674
+Loads per update:       1
+Stores per update:      0
+Instructions:           7340032020
+UOPs:                   10485760000
+--------------------------------------------------------------------------------
+</code></pre></div><p>We&rsquo;re interested in the highlighted MFlops/s line. We can see that this benchmark
+runs at 2894MFlops/s. The CPU on Hamilton compute nodes is an <a href=https://ark.intel.com/content/www/us/en/ark/products/91767/intel-xeon-processor-e5-2650-v4-30m-cache-2-20-ghz.html>Intel
+Broadwell E5-2650 v4</a>,
+which Intel claim has a max clock frequency of 2.9GHz. So we can see
+that this benchmark runs at almost exactly 1 scalar ADD per cycle.</p><blockquote class=exercise><h3>Exercise</h3><span>Replicate the scalar sum reduction benchmark for
+yourself, to check you get similar results. Compare the results to the
+floating point performance obtained when you run the <code>sum_sp_avx</code>
+benchmark instead of the <code>sum_sp</code> benchmark.</span></blockquote><blockquote class=question><h3>Question</h3><span>What floating point throughput do you observe for the SIMD
+(<code>sum_sp_avx</code>) case?</span></blockquote><div id=vector-size></div><blockquote class=exercise><h3>Exercise</h3><span><ol><li>Study what happens to the performance (for both the
+<code>sum_sp</code> and <code>sum_sp_avx</code> benchmarks) when
+you vary the size of the vector from 1kB up to 128MB.</li><li>Produce a plot of performance with MFlops/s on the y axis and
+vector size on the x axis comparing the <code>sum_sp</code> and
+<code>sum_sp_avx</code> benchmarks.</li></ol></span></blockquote><p>Rather than copying and pasting the output from every run into a data
+file, you might find it useful to script the individual benchmarking
+runs. For example, to extract the MFlops/s from the
+<code>likwid-bench</code> output you can use</p><pre><code>likwid-bench -t sum_sp -w S0:16kB:1 | grep MFlops/s | cut -f 3
+</code></pre><blockquote class="book-hint info"><span><h4 id=scripting-the-data-collection>Scripting the data collection</h4><p>For different vector sizes, you&rsquo;ll need to change the size,
+which can be done with a loop, for example to measure the
+performance with vector sizes of 1, 2, and 4kB:</p><div class=highlight><pre style=color:#272822;background-color:#fafafa><code class=language-bash data-lang=bash><span style=color:#00a8c8>for</span> size in 1kB 2kB 4kB<span style=color:#111>;</span> <span style=color:#00a8c8>do</span>
+  <span style=color:#111>echo</span> <span style=color:#111>$size</span> <span style=color:#00a8c8>$(</span>likwid-bench -t sum_sp -w S0:<span style=color:#111>$size</span>:1 <span style=color:#111>|</span> grep MFlops/s <span style=color:#111>|</span> cut -f 3<span style=color:#00a8c8>)</span>
+<span style=color:#00a8c8>done</span>
+</code></pre></div></span></blockquote><blockquote class=question><h3>Question</h3><span>What do you observe about the performance of the scalar code and the
+SIMD code?</span></blockquote></article><footer class=book-footer><div class="flex flex-wrap justify-between"><div><a class="flex align-center" href=https://github.com/wenceorg/comp52315/commit/cdfbd8f86c56d4a17e7e322b59a75940cea4fb4e title="Last modified by Lawrence Mitchell | April 7, 2022" target=_blank rel=noopener><img src=/comp52315/svg/calendar.svg class=book-icon alt=Calendar>
+<span>April 7, 2022</span></a></div><div><a class="flex align-center" href=https://github.com/wenceorg/comp52315/edit/main/site/content//exercises/exercise01.md target=_blank rel=noopener><img src=/comp52315/svg/edit.svg class=book-icon alt=Edit>
+<span>Edit this page</span></a></div></div><div class="flex flex-wrap align-right"><p>© 2020&ndash; <a href=mailto:lawrence.mitchell@durham.ac.uk>Lawrence Mitchell</a> and <a href=https://www.dur.ac.uk/>Durham University</a>.</p><p><a rel=license href=http://creativecommons.org/licenses/by-sa/4.0/><img alt="Creative Commons License" style=border-width:0 src=/comp52315/cc-by-sa.svg></a>
+This work is licensed under a <a rel=license href=http://creativecommons.org/licenses/by-sa/4.0/>Creative
+Commons Attribution-ShareAlike 4.0 International License</a>.</p></div></footer><label for=menu-control class="hidden book-menu-overlay"></label></div><aside class=book-toc><nav id=TableOfContents><ul><li><a href=#benchmarking-with-likwid-bench>Benchmarking with <code>likwid-bench</code></a><ul><li><a href=#overview>Overview</a></li><li><a href=#setup-logging-in-to-hamilton>Setup: logging in to Hamilton</a><ul><li><a href=#using-the-batch-system>Using the batch system</a></li></ul></li><li><a href=#using-likwid-bench>Using <code>likwid-bench</code></a><ul><li><a href=#an-example-benchmark>An example benchmark</a></li></ul></li></ul></li></ul></nav></aside></main></body></html>

@@ -1,0 +1,218 @@
+<!doctype html><html lang=en dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="Models of performance #  If our goal is to improve the performance of some code we should take a scientific approach. We must first define what we mean by performance. So far, we&rsquo;ve talked about floating point throughput (GFlops/s) or memory bandwidth (GBytes/s). However, these are really secondary characteristics to the primary metric of performance of a code:
+How long do I have to wait until I get the answer?"><meta name=theme-color content="#FFFFFF"><meta property="og:title" content="Performance models: roofline"><meta property="og:description" content="Models of performance #  If our goal is to improve the performance of some code we should take a scientific approach. We must first define what we mean by performance. So far, we&rsquo;ve talked about floating point throughput (GFlops/s) or memory bandwidth (GBytes/s). However, these are really secondary characteristics to the primary metric of performance of a code:
+How long do I have to wait until I get the answer?"><meta property="og:type" content="article"><meta property="og:url" content="https://teaching.wence.uk/comp52315/notes/roofline/"><meta property="article:modified_time" content="2022-04-07T18:18:31+01:00"><title>Performance models: roofline | COMP52315 – Performance Engineering</title><link rel=icon href=/comp52315/favicon.svg type=image/x-icon><link rel=stylesheet href=/comp52315/book.min.0cb0b7d6a1ed5d0e95321cc15edca4d6e9cc406149d1f4a3f25fd532f6a3bb38.css integrity="sha256-DLC31qHtXQ6VMhzBXtyk1unMQGFJ0fSj8l/VMvajuzg="><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css integrity=sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X crossorigin=anonymous><script defer src=https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.js integrity=sha384-g7c+Jr9ZivxKLnZTDUhnkOnsh30B4H0rpLUpJ4jAIKs4fnJI+sEnkvrMWph2EDg4 crossorigin=anonymous></script><script defer src=https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/contrib/auto-render.min.js integrity=sha384-mll67QQFJfxn0IYznZYonOWZ644AWYC+Pt2cHqMaRhXVrursRwvLnLaebdGIlYNa crossorigin=anonymous></script><script>document.addEventListener("DOMContentLoaded",function(){renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false},{left:"\\(",right:"\\)",display:false},{left:"\\[",right:"\\]",display:true}]})});</script></head><body dir=ltr><input type=checkbox class="hidden toggle" id=menu-control>
+<input type=checkbox class="hidden toggle" id=toc-control><main class="container flex"><aside class=book-menu><nav><div class=book-brand><img class=book-center src=/comp52315/logo.svg alt=Logo><h2><a href=/comp52315>COMP52315 – Performance Engineering</a></h2></div><ul><li><span>Administrivia</span><ul><li><a href=/comp52315/setup/contact/>Contact details</a></li><li><a href=/comp52315/setup/hamilton/>Hamilton accounts</a></li><li><a href=/comp52315/setup/configuration/>ssh configuration</a></li><li><a href=/comp52315/setup/unix/>Unix resources</a></li></ul></li><li><span>Exercises</span><ul><li><a href=/comp52315/exercises/exercise01/>Sum reductions</a></li><li><a href=/comp52315/exercises/exercise02/>Caches</a></li><li><a href=/comp52315/exercises/exercise03/>Memory bandwidth</a></li><li><a href=/comp52315/exercises/exercise04/>Roofline analysis</a></li><li><a href=/comp52315/exercises/exercise05/>Models and measurements</a></li><li><a href=/comp52315/exercises/exercise06/>Profiling</a></li><li><a href=/comp52315/exercises/exercise07/>Loop tiling matrix transpose</a></li><li><a href=/comp52315/exercises/exercise08/>Loop tiling matrix-matrix multiplication</a></li><li><a href=/comp52315/exercises/exercise09/>Compiler feedback and the BLIS DGEMM</a></li><li><a href=/comp52315/exercises/exercise10/>Stencil layer conditions</a></li></ul></li><li><span>Notes</span><ul><li><a href=/comp52315/notes/introduction/>Introduction</a></li><li><a href=/comp52315/notes/memory/>The memory hierarchy</a></li><li><a href=/comp52315/notes/roofline/ class=active>Performance models: roofline</a></li><li><a href=/comp52315/notes/measurements/>Measurement and profiling</a></li><li><a href=/comp52315/notes/tiling/>Cache blocking/tiling</a></li></ul></li><li><a href=/comp52315/slides/>Slides</a></li><li><a href=/comp52315/coursework/>Coursework: fast finite elements</a><ul></ul></li><li><a href=/comp52315/resources/>Further resources</a></li><li><a href=/comp52315/acknowledgements/>Acknowledgements</a></li><li><span>Past editions</span><ul><li><a href=/comp52315/past-editions/2020-21/>2020/21</a><ul></ul></li></ul></li></ul></nav><script>(function(){var menu=document.querySelector("aside.book-menu nav");addEventListener("beforeunload",function(event){localStorage.setItem("menu.scrollTop",menu.scrollTop);});menu.scrollTop=localStorage.getItem("menu.scrollTop");})();</script></aside><div class=book-page><header class=book-header><div class="flex align-center justify-between"><label for=menu-control><img src=/comp52315/svg/menu.svg class=book-icon alt=Menu></label>
+<strong>Performance models: roofline</strong>
+<label for=toc-control><img src=/comp52315/svg/toc.svg class=book-icon alt="Table of Contents"></label></div><aside class="hidden clearfix"><nav id=TableOfContents><ul><li><a href=#models-of-performance>Models of performance</a><ul><li><a href=#roofline-model>Roofline model</a><ul><li><a href=#why-roofline>Why &ldquo;roofline&rdquo;</a></li><li><a href=#a-simple-example>A simple example</a></li><li><a href=#determining-hardware-characteristics>Determining hardware characteristics</a><ul><li><a href=#memory-bandwidth>Memory bandwidth</a></li><li><a href=#floating-point-throughput>Floating point throughput</a></li></ul></li><li><a href=#computing-arithmetic-intensity>Computing arithmetic intensity</a><ul><li><a href=#counting-by-hand>Counting by hand</a></li></ul></li><li><a href=#cache-models>Cache models</a></li></ul></li></ul></li></ul></nav></aside></header><article class=markdown><blockquote class="book-hint warning"><span>This course page was updated until March 2022 when I left Durham University.
+The materials herein are therefore not necessarily still in date.</span></blockquote><h1 id=models-of-performance>Models of performance
+<a class=anchor href=#models-of-performance>#</a></h1><p>If our goal is to improve the performance of some code we should take
+a scientific approach. We must first define what we mean by
+<em>performance</em>. So far, we&rsquo;ve talked about floating point throughput
+(GFlops/s) or memory bandwidth (GBytes/s). However, these are really
+secondary characteristics to the primary metric of performance of a
+code:</p><p><strong>How long do I have to wait until I get the answer?</strong></p><p>Therefore, we should not lose sight of the overall target of any
+performance optimisation study, which is to <em>minimise the time to
+solution</em> for a given code.</p><p>Our goal is then to come up with a hypothesis-driven optimisation
+cycle. A simple flow diagram is shown below</p><figure style=width:30%><img class=scaled src=https://teaching.wence.uk/comp52315/images/manual/optimisationworkflow.svg alt="Simplified flow diagram for deciding on next steps when optimising code"><figcaption><p>Simplified flow diagram for deciding on next steps when optimising code</p></figcaption></figure><p>The idea is that we decide that the time to solution is too long, and
+must therefore optimise the code. We <em>profile</em> the code to determine
+where it spends all (or most) of its time, and then construct a model
+that explains that time. With a model in hand, we can make a
+prediction about the best optimisation to apply.</p><blockquote class="book-hint info"><span><p>Note that we might not always be able to optimise code such that it
+can run any faster. So another goal of using a model is to determine
+that our code really is running is fast as we might expect.</p><p>That is, if we start from a position of &ldquo;my code is running too slowly
+for my liking&rdquo;, we need to determine if that is due to a bad
+implementation, or just <a href=https://dictionary.cambridge.org/dictionary/english/hard-tough-cheese>hard
+cheese</a>.</p></span></blockquote><p>This allows us to focus our optimisation efforts where they will be
+most effective.</p><p>To do this, we need to construct some models, we&rsquo;ll see a number of
+approaches in this course, the first one we&rsquo;ll consider is the
+<a href=https://doi.org/10.1145/1498765.1498785><em>roofline model</em></a>. This is a
+simple model for loop heavy code.</p><blockquote class=exercise><h3>Exercise</h3><span>Go away and read that paper, it&rsquo;s quite approachable. We&rsquo;ll discuss it
+in class.</span></blockquote><h2 id=roofline-model>Roofline model
+<a class=anchor href=#roofline-model>#</a></h2><p>The roofline model has a simple view of both hardware and software</p><div class="book-columns flex flex-wrap"><div class="flex-even markdown-inner"><h3 id=simple-view-of-hardware>Simple view of hardware</h3><figure style=width:100%><img class=scaled src=https://teaching.wence.uk/comp52315/images/manual/rooflinecpumodel.svg></figure></div><div class="flex-even markdown-inner"><h3 id=simple-view-of-software>Simple view of software</h3><div class=highlight><pre style=color:#272822;background-color:#fafafa><code class=language-c data-lang=c><span style=color:#75715e>/* Possibly nested loops */</span>
+<span style=color:#00a8c8>for</span> <span style=color:#111>(</span><span style=color:#111>i</span> <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span><span style=color:#111>;</span> <span style=color:#111>i</span> <span style=color:#f92672>&lt;</span> <span style=color:#111>...;</span> <span style=color:#111>i</span><span style=color:#f92672>++</span><span style=color:#111>)</span>
+ <span style=color:#75715e>/* Complicated code doing
+</span><span style=color:#75715e>    - N FLOPs causing
+</span><span style=color:#75715e>    - B bytes of data transfer */</span>
+</code></pre></div><p>This allows us to characterise the code using a single number, its
+<em>operational intensity</em>, measured in FLOPs/byte</p><p>$$
+I_c = \frac{N}{B}
+$$</p></div></div><p>To this characterisation of the software, we add two numbers that
+characterise the hardware</p><ol><li>The <em>peak floating point performance</em> \(P_\text{peak}\) measured
+in FLOPs/s</li><li>The <em>peak streaming memory bandwidth</em> \(B_\text{peak}\) measured
+in bytes/s</li></ol><p>Our challenge is then to ask what the limit on the performance of a
+piece of code is. We characterise performance by how fast work can be
+done, measured in FLOPs/s. The roofline model says that the bottleneck
+is either due to</p><ol><li>execution of work, limited by \(P_\text{peak}\),</li><li>or the data path \(I_c B_\text{peak}\).</li></ol><p>We therefore arrive at a bound on performance</p><p>$$
+P_\text{max} = \text{min}(P_\text{peak}, I_c B_\text{peak})
+$$</p><p>This is the simplest possible form of the roofline model. It is an
+<em>optimistic</em> model, everything happens as fast as it possibly can.</p><h3 id=why-roofline>Why &ldquo;roofline&rdquo;
+<a class=anchor href=#why-roofline>#</a></h3><p>Let&rsquo;s draw a sketch of the performance limits to understand</p><figure style=width:70%><img class=scaled src=https://teaching.wence.uk/comp52315/images/manual/rooflinesketch.svg alt="Sketch of the performance limits for the roofline model"><figcaption><p>Sketch of the performance limits for the roofline model</p></figcaption></figure><p>The achievable performance for <em>any code</em> using this model lies
+underneath the pitched &ldquo;roof&rdquo; (hence roofline). The broad idea is that
+we characterise the hardware once (peak floating point performance,
+and peak streaming memory bandwidth) and measure $I_c$ for our code
+along with <em>its</em> floating point performance. We can then plot the
+performance on a roofline plot, which will give an idea of which
+performance optimisations are likely to pay off.</p><h3 id=a-simple-example>A simple example
+<a class=anchor href=#a-simple-example>#</a></h3><p>For example, consider three exemplar codes, plotted on a roofline</p><figure style=width:70%><img class=scaled src=https://teaching.wence.uk/comp52315/images/auto/roofline-example-simple.svg alt="Exemplar roofline plot"><figcaption><p>Exemplar roofline plot</p></figcaption></figure><p>The roofline model suggests that there is not really any room to
+improve the implementation of &ldquo;Code A&rdquo;, it&rsquo;s a memory
+bandwidth-limited code and achieving that limit.</p><p>&ldquo;Code B&rdquo; is also memory bandwidth limited, but is not achieving that
+limit, so there is potentially some room for optimisation.</p><p>Finally &ldquo;Code C&rdquo; is limited by floating point throughput, and is not
+close.</p><p>This model therefore suggests that we don&rsquo;t need to do anything with
+&ldquo;Code A&rdquo;, we should look at ways of improving the memory traffic for
+&ldquo;Code B&rdquo;, and we should look at ways of improving the floating point
+performance of &ldquo;Code C&rdquo;.</p><blockquote class="book-hint warning"><span><p>One thing you may immediately have spotted is that if we only have a
+roofline plot to hand, we can&rsquo;t answer our initial question.</p><p>There is no way to know how fast these codes get the answer.</p><p>Consequently, we should not use it to judge which of a number of
+different algorithms for a given problem are best (since we may be led
+to false conclusions).</p><p>This is a general rule with optimisation. We start out with lofty goals
+of improving runtime, but when we start profiling we look at memory
+bandwidth and floating point throughput. It&rsquo;s easy to forget that
+we&rsquo;re really wanting to improve runtime.</p></span></blockquote><h3 id=determining-hardware-characteristics>Determining hardware characteristics
+<a class=anchor href=#determining-hardware-characteristics>#</a></h3><p>To figure out the performance limits of any given hardware, we have
+two options:</p><ol><li>Look up values on a spec sheet</li><li>Perform some measurements</li></ol><p>Recall that we need two pieces of information, the memory bandwidth
+and the floating point throughput.</p><h4 id=memory-bandwidth>Memory bandwidth
+<a class=anchor href=#memory-bandwidth>#</a></h4><p>To look up the maximum achievable bandwidth on a spec sheet, we need
+to know the CPU model, as well as what type of RAM is installed. Let&rsquo;s
+do an example with the chips on Hamilton. To determine the installed
+chip on a compute node I execute an interactive batch job and look at
+the contents of <code>/proc/cpuinfo</code>, looking for the <code>model name</code></p><pre><code>$ ssh hamilton
+$ srun --pty $SHELL
+$ cat /proc/cpuinfo | grep &quot;model name&quot; | tail -1
+model name	: Intel(R) Xeon(R) CPU E5-2650 v4 @ 2.20GHz
+</code></pre><blockquote class="book-hint info"><span>Whenever you run the likwid tools they will also report the CPU you
+were running on.</span></blockquote><p>Then I go to <a href=https://ark.intel.com>ark.intel.com</a> and search of
+<code>E5-2650</code>, I get two results and pick the <a href=https://ark.intel.com/content/www/us/en/ark/products/91767/intel-xeon-processor-e5-2650-v4-30m-cache-2-20-ghz.html>one at
+2.2GHz</a></p><p>I go down to the memory specifications and see that this chip supports
+4-channel DDR memory with a frequency of up to 2.4GHz. To compute the
+maximum achievable memory bandwidth we have</p><p>$$
+4 \times 2.4GHz \times 8Byte = 76.8GByte/s
+$$</p><blockquote class="book-hint warning"><span><p>Although the memory system can in theory deliver this, it is not
+achievable by a single core: we&rsquo;ll see this when we measure stuff
+later.</p><p>If you want lots of details on this, there are some excellent
+stackoverflow posts: <a href=https://stackoverflow.com/a/47787231>1</a>,
+<a href=https://stackoverflow.com/a/47714514>2</a>,
+<a href=https://stackoverflow.com/a/43574756>3</a>.</p></span></blockquote><p>There are two issues with this:</p><ol><li>I don&rsquo;t actually know if Hamilton has DDR2400 RAM chips installed</li><li>This is a &ldquo;guaranteed not to exceed&rdquo; limit, in practice, even if we
+do have the right RAM, it is not typically achieved.</li></ol><p>The alternative approach, which nearly everyone uses, is to <em>measure</em>
+the memory bandwidth using the
+<a href=https://www.cs.virginia.edu/stream/>STREAM</a> benchmark. This is what
+we will typically do, and <a href=https://teaching.wence.uk/comp52315/exercises/exercise04/>exercise 4</a>
+does exactly that.</p><h4 id=floating-point-throughput>Floating point throughput
+<a class=anchor href=#floating-point-throughput>#</a></h4><p>Again, the guaranteed not to exceed peak can be determined from spec
+sheet frequencies and some knowledge of hardware. To do this, let&rsquo;s
+look a little at how a CPU core actually works.</p><blockquote class="book-hint info"><span>If you want <em>much</em> more details on speed limits of compiled code,
+Travis Downs has a really nice
+<a href=https://travisdowns.github.io/blog/2019/06/11/speed-limits.html>overview</a>.
+This is article is also a good introduction to lots of the details of
+modern CPUs.</span></blockquote><p>A simplified picture of a CPU execution engine is shown below (for the
+Haswell microarchitecture).</p><figure style=width:50%><img class=scaled src=https://teaching.wence.uk/comp52315/images/manual/haswellexec.png alt="Simplified picture of the Haswell execution engine"><figcaption><p>Simplified picture of the Haswell execution engine</p></figcaption></figure><p>The individual assembly instructions in the compiled code are fetched
+and decoded. They are then scheduled (and possibly reordered) in
+hardware onto execution ports.</p><p>These ports feed the instruction to the execution unit which executes
+and retires the instruction.</p><blockquote class="book-hint info"><span><p>Instructions are <em>issued</em> to the scheduler, but may fail to complete
+because of data dependencies not being satisfied, or because they were
+issued in a mis-predicted branch.</p><p>An instruction finally completes (leaving the execution pipeline) when
+it is <em>retired</em>.</p></span></blockquote><p>Intel chips are 4-way superscalar. That is, they can issue up to 4
+μops (or micro-ops) per cycle. However, a port in the execution engine
+can only execute one μop per cycle. Floating point operations only
+issue on ports 0 and 1, so our chip can issue at most 2 floating point
+instructions per cycle.</p><p>Fused multiply-add (FMA) instructions (which perform $y ← a + b\times
+c$) excute on both ports, as do multiplications. However, addition
+only executes on port 1, and division only on port 0.</p><p>If our code basically only executes floating point instructions the
+best possible case is that we have two SIMD FMA instructions issued
+per cycle. In this case, the guaranteed not to exceed peak for a
+single core of the Broadwell chips on Hamilton (which have a peak
+frequency of 2.9GHz) is</p><p>$$
+2.9 \times 2 \times 4 \times 2 = 46.4\text{GFlops/s}
+$$</p><p>We issue 2 FMAs per cycle, each operates on 4 double-precision numbers
+(since a <code>double</code> is 64bits and an AVX register is 256bits), so each
+instruction does $4\times 2 = 8$ floating point operations.</p><p>Conversely, if our code only contains <code>ADD</code> instructions, then the
+peak possible performance is only</p><p>$$
+2.9 \times 1 \times 4 = 11.6\text{GFlops/s}
+$$</p><p>These calculations are further complicated by <a href=https://en.wikichip.org/wiki/intel/frequency_behavior><em>frequency
+scaling</em></a>. For
+lots of detail on this, see this <a href=https://travisdowns.github.io/blog/2020/01/17/avxfreq1.html>excellent
+article</a>.</p><p>To actually hit these limits is remarkably difficult. The FMA
+instruction has a pipeline latency of 5 on Broadwell chips (4 on
+Skylake), so to hit the throughput limit, we need 5 in-flight
+instructions per port, for a total of 10 in-flight instructions.
+Feeding enough data to these is very difficult. The closest that
+numerical code typically gets to this in is highly-optimised <a href=https://github.com/flame/blis/>dense
+linear algebra</a> libraries.</p><p>It is therefore often useful to do two things:</p><ol><li>Measure the achievable floating point peak with
+<a href=https://software.intel.com/content/www/us/en/develop/articles/intel-mkl-benchmarks-suite.html>LINPACK</a>
+instead of computing it</li><li>Add multiple floating point limits on our roofline plot,
+corresponding to different instruction mixes. We will see how we
+can measure, or estimate, the instruction mix in our code later.</li></ol><h3 id=computing-arithmetic-intensity>Computing arithmetic intensity
+<a class=anchor href=#computing-arithmetic-intensity>#</a></h3><p>Now that we&rsquo;ve characterised our hardware, it&rsquo;s time to move on to the
+characterisation of our code. Recall that we need to determine the
+<em>arithmetic intensity</em> $I_c$: the number of floating point operations
+performed per byte of data accessed.</p><p>There are two approaches we can take here</p><ol><li>Run our code and measure, using performance counters, which we will
+get to [later](TODO LINK).</li><li>Read the relevant part of the code and count floating point
+operations and data accesses.</li></ol><p>Both approaches have pros and cons, I therefore recommend, if possible
+to take a blended approach, augmenting measurements with models.</p><h4 id=counting-by-hand>Counting by hand
+<a class=anchor href=#counting-by-hand>#</a></h4><p>Let&rsquo;s look at a simple example to see how we would go about counting
+floating point operations and data movement.</p><p>Consider the following, very simple, loop:</p><div class=highlight><pre style=color:#272822;background-color:#fafafa><code class=language-c data-lang=c><span style=color:#00a8c8>double</span> <span style=color:#f92672>*</span><span style=color:#111>a</span><span style=color:#111>,</span> <span style=color:#f92672>*</span><span style=color:#111>b</span><span style=color:#111>,</span> <span style=color:#f92672>*</span><span style=color:#111>c</span><span style=color:#111>,</span> <span style=color:#f92672>*</span><span style=color:#111>d</span><span style=color:#111>;</span>
+<span style=color:#111>...;</span> <span style=color:#75715e>/* Allocate memory and initialise */</span>
+
+<span style=color:#75715e>/* This is the code we&#39;ve determined to do all the floating point work. */</span>
+<span style=color:#00a8c8>for</span> <span style=color:#111>(</span><span style=color:#00a8c8>int</span> <span style=color:#111>i</span> <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span><span style=color:#111>;</span> <span style=color:#111>i</span> <span style=color:#f92672>&lt;</span> <span style=color:#111>N</span><span style=color:#111>;</span> <span style=color:#111>i</span><span style=color:#f92672>++</span><span style=color:#111>)</span> <span style=color:#111>{</span>
+  <span style=color:#111>a</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>]</span> <span style=color:#f92672>=</span> <span style=color:#111>b</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>]</span><span style=color:#f92672>*</span><span style=color:#111>c</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>]</span> <span style=color:#f92672>+</span> <span style=color:#111>d</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>]</span><span style=color:#f92672>*</span><span style=color:#111>a</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>];</span>
+<span style=color:#111>}</span>
+</code></pre></div><p>This code does $N$ iterations of a loop, each iteration performs two
+multiplications and one addition for a total of $3N$ double precision
+floating point operations.</p><p>Notice how in the simplest case, we don&rsquo;t care about the type of
+floating point operation.</p><blockquote class=exercise><h3>Exercise</h3><span>Given that there are two multiplications and one addition per loop
+iteration, what is the minimum number of cycles required to execute a
+single iteration of the loop (ignore any memory load and store
+operations).</span></blockquote><p>Now let&rsquo;s try and count the data accesses. Each read counts as one
+access, each write counts as two (one load, and one store<sup id=fnref:1><a href=#fn:1 class=footnote-ref role=doc-noteref>1</a></sup>). We
+only care about array data so we should ignore any loop variables.</p><p>So our loop performs three double precision reads and one double
+precision read-write (<code>a[i]</code> appears on both sides) for a total of
+$5\times 8$ bytes required per iteration (or $40N$ bytes total).</p><p>This seems like we&rsquo;re now done, in our abstract model, the arithmetic
+intensity of our code is</p><p>$$
+I_c = \frac{3N}{40N} = 0.075 \text{flops/byte}.
+$$</p><p>There is one remaining wrinkle. Although it is reasonable to count
+floating point operations in this manner, the determine the actual
+data moved we need a model of the cache behaviour of the hardware.</p><p>For the loop we just studied, every entry is touched exactly once and
+then discarded (so we just care about streaming the data). Let&rsquo;s look
+at an example where this isn&rsquo;t the case.</p><div class=highlight><pre style=color:#272822;background-color:#fafafa><code class=language-c data-lang=c><span style=color:#00a8c8>double</span> <span style=color:#f92672>*</span><span style=color:#111>a</span><span style=color:#111>,</span> <span style=color:#f92672>*</span><span style=color:#111>b</span><span style=color:#111>,</span> <span style=color:#f92672>*</span><span style=color:#111>c</span><span style=color:#111>,</span> <span style=color:#f92672>*</span><span style=color:#111>d</span><span style=color:#111>;</span>
+<span style=color:#111>...;</span>
+
+<span style=color:#00a8c8>for</span> <span style=color:#111>(</span><span style=color:#00a8c8>int</span> <span style=color:#111>i</span> <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span><span style=color:#111>;</span> <span style=color:#111>i</span> <span style=color:#f92672>&lt;</span> <span style=color:#111>N</span><span style=color:#111>;</span> <span style=color:#111>i</span><span style=color:#f92672>++</span><span style=color:#111>)</span> <span style=color:#111>{</span>
+  <span style=color:#00a8c8>for</span> <span style=color:#111>(</span><span style=color:#00a8c8>int</span> <span style=color:#111>j</span> <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span><span style=color:#111>;</span> <span style=color:#111>j</span> <span style=color:#f92672>&lt;</span> <span style=color:#111>M</span><span style=color:#111>;</span> <span style=color:#111>j</span><span style=color:#f92672>++</span><span style=color:#111>)</span> <span style=color:#111>{</span>
+    <span style=color:#111>a</span><span style=color:#111>[</span><span style=color:#111>j</span><span style=color:#111>]</span> <span style=color:#f92672>=</span> <span style=color:#111>b</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>]</span><span style=color:#f92672>*</span><span style=color:#111>c</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>]</span> <span style=color:#f92672>+</span> <span style=color:#111>d</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>]</span><span style=color:#f92672>*</span><span style=color:#111>a</span><span style=color:#111>[</span><span style=color:#111>j</span><span style=color:#111>];</span>
+  <span style=color:#111>}</span>
+<span style=color:#111>}</span>
+</code></pre></div><p>In this example, the whole of <code>a</code> is touched for every iteration of
+the outer loop. Similarly, each entry of <code>b</code>, <code>c</code>, and <code>d</code> is accessed
+<code>j</code> times in the inner loop. A memory-optimal implementation of this
+loop would load <code>b[i]</code>, <code>c[i]</code>, and <code>d[i]</code> into registers for each
+iteration of the outer loop and keep all of <code>a</code> in cache for the
+duration. However, if the cache is not big enough, we might not
+achieve this.</p><h3 id=cache-models>Cache models
+<a class=anchor href=#cache-models>#</a></h3><p>In our analysis, we might not have complete knowledge of the cache
+sizes, so we can use some simple models. The two extremes are a
+<em>perfect cache</em> and a <em>pessimal cache</em>.</p><div class="book-columns flex flex-wrap"><div class="flex-even markdown-inner"><h4 id=perfect-cache>Perfect cache</h4><p>This model provides a <em>lower bound</em> on data movement. We assume that
+each piece of data is moved from main memory exactly once. It
+therefore counts <em>unique</em> memory accesses.</p><p>For the example above, we touch $M$ entries of <code>a</code> with read-write
+access (for $8 \times 2 M$ bytes), and we touch $N$ entries each of
+<code>b</code>, <code>c</code>, and <code>d</code> with read access (for $8 \times 3 N$ bytes).</p><p>So the total data movement for a perfect cache model is $16M + 24N$ bytes.</p></div><div class="flex-even markdown-inner"><h4 id=pessimal-cache>Pessimal cache</h4><p>This model provides an <em>upper bound</em> on data movement. We assume that
+each access misses cache, and so we count the <em>total</em> non-unique
+memory accesses.</p><p>For the example above, there are $MN$ iterations of the loops, so the
+total data movement for a pessimal cache model is $40 MN$ bytes.</p></div></div><p>Real code will fall somewhere in between these two extremes: hopefully
+close to the perfect cache case.</p><p>We can also come up with intermediate bounds. In the above example,
+suppose that <code>a</code> does not fit in cache, we would expect that the
+streaming access to <code>b</code>, <code>c</code>, and <code>d</code> to be fine (because there&rsquo;s
+registere reuse), but we might get no cache hits for <code>a</code>. In this case
+we might expect that the total data movement is $8 \times 2 MN +
+8\times 3 N = 16 MN + 24 N$ bytes. Since we stream the read arrays
+only once, but stream <code>a</code> $N$ times.</p><blockquote class=exercise><h3>Exercise</h3><span>Suppose $N = 1000$ and $M = 32000$, compute the arithmetic intensities
+for the above double loop assuming the perfect and pessimal cache
+models, along with our better intermediate estimate.</span></blockquote><p>The reason to use these models is that they give us bounds on what is
+achievable by a real code. Measurement of arithmetic intensity only
+tells us what the code we <em>have</em> does, not what it <em>could do</em>.</p><blockquote class=exercise><h3>Exercise</h3><span>Go ahead and attempt <a href=https://teaching.wence.uk/comp52315/exercises/exercise04/>exercise 4</a> which
+looks at producing a roofline model for some different implementations
+of dense matrix-vector multiplication.</span></blockquote><section class=footnotes role=doc-endnotes><hr><ol><li id=fn:1 role=doc-endnote><p>In some cases, they only count as a store, if the compiler can
+use <a href=https://sites.utexas.edu/jdm4372/2018/01/01/notes-on-non-temporal-aka-streaming-stores/>nontemporal
+stores</a> <a href=#fnref:1 class=footnote-backref role=doc-backlink>&#8617;&#xfe0e;</a></p></li></ol></section></article><footer class=book-footer><div class="flex flex-wrap justify-between"><div><a class="flex align-center" href=https://github.com/wenceorg/comp52315/commit/cdfbd8f86c56d4a17e7e322b59a75940cea4fb4e title="Last modified by Lawrence Mitchell | April 7, 2022" target=_blank rel=noopener><img src=/comp52315/svg/calendar.svg class=book-icon alt=Calendar>
+<span>April 7, 2022</span></a></div><div><a class="flex align-center" href=https://github.com/wenceorg/comp52315/edit/main/site/content//notes/roofline.md target=_blank rel=noopener><img src=/comp52315/svg/edit.svg class=book-icon alt=Edit>
+<span>Edit this page</span></a></div></div><div class="flex flex-wrap align-right"><p>© 2020&ndash; <a href=mailto:lawrence.mitchell@durham.ac.uk>Lawrence Mitchell</a> and <a href=https://www.dur.ac.uk/>Durham University</a>.</p><p><a rel=license href=http://creativecommons.org/licenses/by-sa/4.0/><img alt="Creative Commons License" style=border-width:0 src=/comp52315/cc-by-sa.svg></a>
+This work is licensed under a <a rel=license href=http://creativecommons.org/licenses/by-sa/4.0/>Creative
+Commons Attribution-ShareAlike 4.0 International License</a>.</p></div></footer><label for=menu-control class="hidden book-menu-overlay"></label></div><aside class=book-toc><nav id=TableOfContents><ul><li><a href=#models-of-performance>Models of performance</a><ul><li><a href=#roofline-model>Roofline model</a><ul><li><a href=#why-roofline>Why &ldquo;roofline&rdquo;</a></li><li><a href=#a-simple-example>A simple example</a></li><li><a href=#determining-hardware-characteristics>Determining hardware characteristics</a><ul><li><a href=#memory-bandwidth>Memory bandwidth</a></li><li><a href=#floating-point-throughput>Floating point throughput</a></li></ul></li><li><a href=#computing-arithmetic-intensity>Computing arithmetic intensity</a><ul><li><a href=#counting-by-hand>Counting by hand</a></li></ul></li><li><a href=#cache-models>Cache models</a></li></ul></li></ul></li></ul></nav></aside></main></body></html>

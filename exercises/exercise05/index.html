@@ -1,0 +1,85 @@
+<!doctype html><html lang=en dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="Verifying a model with measurements #  The goal of this exercise is to verify our model for the number of loads and stores in a stream benchmark using performance counters, accessed via likwid-perfctr.
+Background #  I provide an implementation (in code/exercise05/stream.c) written in C of the STREAM TRIAD benchmark. It provides scalar, SSE, and AVX implementations of the loop
+double *a, *b, *c; ... for (i = 0; i &amp;lt; N; i++) { c[i] = c[i] + a[i] * b[i]; } We will measure the number of loads and stores for this loop using likwid-perfctr."><meta name=theme-color content="#FFFFFF"><meta property="og:title" content="Models and measurements"><meta property="og:description" content="Verifying a model with measurements #  The goal of this exercise is to verify our model for the number of loads and stores in a stream benchmark using performance counters, accessed via likwid-perfctr.
+Background #  I provide an implementation (in code/exercise05/stream.c) written in C of the STREAM TRIAD benchmark. It provides scalar, SSE, and AVX implementations of the loop
+double *a, *b, *c; ... for (i = 0; i &amp;lt; N; i++) { c[i] = c[i] + a[i] * b[i]; } We will measure the number of loads and stores for this loop using likwid-perfctr."><meta property="og:type" content="article"><meta property="og:url" content="https://teaching.wence.uk/comp52315/exercises/exercise05/"><meta property="article:modified_time" content="2022-04-07T18:18:31+01:00"><title>Models and measurements | COMP52315 – Performance Engineering</title><link rel=icon href=/comp52315/favicon.svg type=image/x-icon><link rel=stylesheet href=/comp52315/book.min.0cb0b7d6a1ed5d0e95321cc15edca4d6e9cc406149d1f4a3f25fd532f6a3bb38.css integrity="sha256-DLC31qHtXQ6VMhzBXtyk1unMQGFJ0fSj8l/VMvajuzg="></head><body dir=ltr><input type=checkbox class="hidden toggle" id=menu-control>
+<input type=checkbox class="hidden toggle" id=toc-control><main class="container flex"><aside class=book-menu><nav><div class=book-brand><img class=book-center src=/comp52315/logo.svg alt=Logo><h2><a href=/comp52315>COMP52315 – Performance Engineering</a></h2></div><ul><li><span>Administrivia</span><ul><li><a href=/comp52315/setup/contact/>Contact details</a></li><li><a href=/comp52315/setup/hamilton/>Hamilton accounts</a></li><li><a href=/comp52315/setup/configuration/>ssh configuration</a></li><li><a href=/comp52315/setup/unix/>Unix resources</a></li></ul></li><li><span>Exercises</span><ul><li><a href=/comp52315/exercises/exercise01/>Sum reductions</a></li><li><a href=/comp52315/exercises/exercise02/>Caches</a></li><li><a href=/comp52315/exercises/exercise03/>Memory bandwidth</a></li><li><a href=/comp52315/exercises/exercise04/>Roofline analysis</a></li><li><a href=/comp52315/exercises/exercise05/ class=active>Models and measurements</a></li><li><a href=/comp52315/exercises/exercise06/>Profiling</a></li><li><a href=/comp52315/exercises/exercise07/>Loop tiling matrix transpose</a></li><li><a href=/comp52315/exercises/exercise08/>Loop tiling matrix-matrix multiplication</a></li><li><a href=/comp52315/exercises/exercise09/>Compiler feedback and the BLIS DGEMM</a></li><li><a href=/comp52315/exercises/exercise10/>Stencil layer conditions</a></li></ul></li><li><span>Notes</span><ul><li><a href=/comp52315/notes/introduction/>Introduction</a></li><li><a href=/comp52315/notes/memory/>The memory hierarchy</a></li><li><a href=/comp52315/notes/roofline/>Performance models: roofline</a></li><li><a href=/comp52315/notes/measurements/>Measurement and profiling</a></li><li><a href=/comp52315/notes/tiling/>Cache blocking/tiling</a></li></ul></li><li><a href=/comp52315/slides/>Slides</a></li><li><a href=/comp52315/coursework/>Coursework: fast finite elements</a><ul></ul></li><li><a href=/comp52315/resources/>Further resources</a></li><li><a href=/comp52315/acknowledgements/>Acknowledgements</a></li><li><span>Past editions</span><ul><li><a href=/comp52315/past-editions/2020-21/>2020/21</a><ul></ul></li></ul></li></ul></nav><script>(function(){var menu=document.querySelector("aside.book-menu nav");addEventListener("beforeunload",function(event){localStorage.setItem("menu.scrollTop",menu.scrollTop);});menu.scrollTop=localStorage.getItem("menu.scrollTop");})();</script></aside><div class=book-page><header class=book-header><div class="flex align-center justify-between"><label for=menu-control><img src=/comp52315/svg/menu.svg class=book-icon alt=Menu></label>
+<strong>Models and measurements</strong>
+<label for=toc-control><img src=/comp52315/svg/toc.svg class=book-icon alt="Table of Contents"></label></div><aside class="hidden clearfix"><nav id=TableOfContents><ul><li><a href=#verifying-a-model-with-measurements>Verifying a model with measurements</a><ul><li><a href=#background>Background</a></li><li><a href=#compiling-with-likwid-annotations-enabled>Compiling with likwid annotations enabled</a></li></ul></li></ul></nav></aside></header><article class=markdown><blockquote class="book-hint warning"><span>This course page was updated until March 2022 when I left Durham University.
+The materials herein are therefore not necessarily still in date.</span></blockquote><h1 id=verifying-a-model-with-measurements>Verifying a model with measurements
+<a class=anchor href=#verifying-a-model-with-measurements>#</a></h1><p>The goal of this exercise is to verify our model for the number of
+loads and stores in a stream benchmark using performance counters,
+accessed via
+<a href=https://github.com/RRZE-HPC/likwid/wiki/likwid-perfctr><code>likwid-perfctr</code></a>.</p><h2 id=background>Background
+<a class=anchor href=#background>#</a></h2><p>I provide <a href=https://teaching.wence.uk/comp52315/code/exercise05/stream.c>an implementation</a> (in
+<code>code/exercise05/stream.c</code>) written in C
+of the <a href=https://www.cs.virginia.edu/stream/>STREAM TRIAD</a> benchmark.
+It provides scalar, SSE, and AVX implementations of the loop</p><div class=highlight><pre style=color:#272822;background-color:#fafafa><code class=language-c data-lang=c><span style=color:#00a8c8>double</span> <span style=color:#f92672>*</span><span style=color:#111>a</span><span style=color:#111>,</span> <span style=color:#f92672>*</span><span style=color:#111>b</span><span style=color:#111>,</span> <span style=color:#f92672>*</span><span style=color:#111>c</span><span style=color:#111>;</span>
+<span style=color:#111>...</span>
+<span style=color:#00a8c8>for</span> <span style=color:#111>(</span><span style=color:#111>i</span> <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span><span style=color:#111>;</span> <span style=color:#111>i</span> <span style=color:#f92672>&amp;</span><span style=color:#111>lt</span><span style=color:#111>;</span> <span style=color:#111>N</span><span style=color:#111>;</span> <span style=color:#111>i</span><span style=color:#f92672>++</span><span style=color:#111>)</span> <span style=color:#111>{</span>
+  <span style=color:#111>c</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>]</span> <span style=color:#f92672>=</span> <span style=color:#111>c</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>]</span> <span style=color:#f92672>+</span> <span style=color:#111>a</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>]</span> <span style=color:#f92672>*</span> <span style=color:#111>b</span><span style=color:#111>[</span><span style=color:#111>i</span><span style=color:#111>];</span>
+<span style=color:#111>}</span>
+</code></pre></div><p>We will measure the number of loads and stores for this loop using
+<code>likwid-perfctr</code>. So our first task is to compile the code
+appropriately.</p><h2 id=compiling-with-likwid-annotations-enabled>Compiling with likwid annotations enabled
+<a class=anchor href=#compiling-with-likwid-annotations-enabled>#</a></h2><p>The code is annotated with <a href=https://github.com/RRZE-HPC/likwid/wiki/likwid-perfctr#using-the-marker-api>likwid-specific
+markers</a>
+around the relevant loops. This way we can ensure that we&rsquo;re only
+measuring counters for the bit of the code we&rsquo;re interested in. We
+therefore need to enable these when compiling. As before we load the
+likwid module with <code>module load likwid/5.0.1</code>.</p><p>We can safely compile this code with GCC, load the GCC module with
+<code>module load gcc/9.3.0</code> and run:</p><pre><code>gcc -std=c99 -mfma -O1 -DLIKWID_PERFMON -fno-inline -march=native -o stream stream.c -llikwid
+</code></pre><p>The flag <code>-DLIKWID_PERFMON</code> adds a new symbol in the
+preprocessor which will turn on the likwid markers. We then also need
+to link against the likwid runtime library with <code>-llikwid</code>.
+To ensure that this library is available when you run the code, you
+should load the likwid module on the compute node (or run <code>module load likwid/5.0.1</code> in your batch submission script).</p><p>For this exercise, <code>likwid-perfctr</code> does not give us an appropriate
+predefined group. Instead, we must use a low-level counter directly.
+For loads the relevant counter is <code>MEM_UOPS_RETIRED_LOADS_ALL</code>, for
+stores it is <code>MEM_UOPS_RETIRED_STORES_ALL</code>. We must specify a <a href=https://github.com/RRZE-HPC/likwid/wiki/likwid-perfctr#using-custom-event-sets><em>group
+string</em></a>
+which consists of the name of the counter and the register to save it
+in. For memory operations we can use the registers <code>PMC0</code> and <code>PMC1</code>
+(possibly others, but these will suffice).</p><p>So, a complete command line to measure the number of loads is</p><pre><code>likwid-perfctr -m -g &quot;MEM_UOPS_RETIRED_LOADS_ALL:PMC0&quot; -C 0 ./stream 1000000 sca
+</code></pre><p>This says to enable the marker API (with <code>-m</code>), to count
+the <code>MEM_UOPS_RETIRED_LOADS_ALL</code> event in
+<code>PMC0</code>, and to pin the executable to core zero (with
+<code>-C 0</code>). This final part is necessary so that the operating
+system does not move the executable half way through, breaking our
+measurements. You should see output similar to the following</p><pre><code>--------------------------------------------------------------------------------
+CPU name: Intel(R) Xeon(R) CPU E5-2650 v4 @ 2.20GHz CPU type: Intel
+Xeon Broadwell EN/EP/EX processor CPU clock: 2.20 GHz
+--------------------------------------------------------------------------------
+Sleeping longer as likwid_sleep() called without prior initialization
+sca loop, sum 3.33328e+17
+--------------------------------------------------------------------------------
+Region Scalar, Group 1: Custom
++-------------------+----------+
+|    Region Info    |  Core 0  |
++-------------------+----------+
+| RDTSC Runtime [s] | 0.001473 |
+|     call count    |        1 |
++-------------------+----------+
+
++----------------------------+---------+--------------+
+|            Event           | Counter |    Core 0    |
++----------------------------+---------+--------------+
+|     Runtime (RDTSC) [s]    |   TSC   | 1.472779e-03 |
+| MEM_UOPS_RETIRED_LOADS_ALL |   PMC0  |      3001190 |
+|      INSTR_RETIRED_ANY     |  FIXC0  |      4629691 |
+|    CPU_CLK_UNHALTED_CORE   |  FIXC1  |      3247484 |
+|    CPU_CLK_UNHALTED_REF    |  FIXC2  |      3247574 |
++----------------------------+---------+--------------+
+</code></pre><p>This measurement at least, aligns with what we expected, since we see
+about 300000 loads.</p><blockquote class=question><h3>Question</h3><span><ol><li>How does the number of loads change if you use the SSE, AVX, or FMA
+versions of the code?</li><li>How many stores do you measure?</li><li>Can you find a way of measuring the stores and loads in one go?</li></ol></span></blockquote><blockquote class=question><h3>Question</h3><span><p>Try compiling the code with:</p><pre><code>gcc -std=c99 -mfma -O1 -DLIKWID_PERFMON -fno-inline -o stream stream.c -llikwid
+</code></pre><p>Do you still measure the same instruction counts for all cases?</p><p>To understand what is going on, we can inspect the assembly code for
+these two cases by getting the compiler to spit that out instead:</p><pre><code>gcc -std=c99 -mfma -O1 -DLIKWID_PERFMON -fno-inline -S -o stream-no-march.s stream.c -llikwid
+
+gcc -std=c99 -mfma -O1 -DLIKWID_PERFMON -fno-inline -march=native -S -o stream-march-native.s stream.c -llikwid
+</code></pre><p>Compare the loop bodies for the functions, do you observe any
+differences in the assembly that might explain things?</p></span></blockquote></article><footer class=book-footer><div class="flex flex-wrap justify-between"><div><a class="flex align-center" href=https://github.com/wenceorg/comp52315/commit/cdfbd8f86c56d4a17e7e322b59a75940cea4fb4e title="Last modified by Lawrence Mitchell | April 7, 2022" target=_blank rel=noopener><img src=/comp52315/svg/calendar.svg class=book-icon alt=Calendar>
+<span>April 7, 2022</span></a></div><div><a class="flex align-center" href=https://github.com/wenceorg/comp52315/edit/main/site/content//exercises/exercise05.md target=_blank rel=noopener><img src=/comp52315/svg/edit.svg class=book-icon alt=Edit>
+<span>Edit this page</span></a></div></div><div class="flex flex-wrap align-right"><p>© 2020&ndash; <a href=mailto:lawrence.mitchell@durham.ac.uk>Lawrence Mitchell</a> and <a href=https://www.dur.ac.uk/>Durham University</a>.</p><p><a rel=license href=http://creativecommons.org/licenses/by-sa/4.0/><img alt="Creative Commons License" style=border-width:0 src=/comp52315/cc-by-sa.svg></a>
+This work is licensed under a <a rel=license href=http://creativecommons.org/licenses/by-sa/4.0/>Creative
+Commons Attribution-ShareAlike 4.0 International License</a>.</p></div></footer><label for=menu-control class="hidden book-menu-overlay"></label></div><aside class=book-toc><nav id=TableOfContents><ul><li><a href=#verifying-a-model-with-measurements>Verifying a model with measurements</a><ul><li><a href=#background>Background</a></li><li><a href=#compiling-with-likwid-annotations-enabled>Compiling with likwid annotations enabled</a></li></ul></li></ul></nav></aside></main></body></html>
